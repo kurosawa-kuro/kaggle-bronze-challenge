@@ -1,17 +1,23 @@
 setup:
-  project: apps
+  project: kuro-dev-k
   config: dev
 
 # =========================
 # シークレット管理方針
 # =========================
 # チーム共有・本番クレデンシャル類は Doppler で集中管理する。
-# 非機密の設定値は env/config.yaml、ローカルだけの秘密情報は env/secret.yaml に置く。
-# env/secret.yaml は .gitignore で除外し、コミットしない。
+# 非機密の設定値は conf/config.yaml、ローカルだけの秘密情報は conf/secret.yaml に置く。
+# conf/secret.yaml は .gitignore で除外し、コミットしない。
 # 値は登録せず、キー名と用途だけをコメントで管理する。
 #
 # 命名規則: <CATEGORY>_<SERVICE>_[QUALIFIER…]_<TYPE>（docs/specs/仕様書.md §1）。
-# 正本は Doppler。本カタログは apps/dev の実在キー（2026-06-12 時点・25件）の写し。
+# 正本は Doppler。本カタログは kuro-dev-k/dev の実在キーの写し。
+
+# =========================
+# ML / DATA
+# =========================
+# ML_KAGGLE_TOKEN                 # Kaggle API トークン（make download / submit で使用）
+#                                 # Makefile で KAGGLE_API_TOKEN にマッピングして kaggle CLI へ渡す
 
 # =========================
 # AI / LLM

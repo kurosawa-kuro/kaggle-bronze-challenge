@@ -36,3 +36,12 @@ Kaggle ブロンズ取得を目的とした LightGBM 主軸・表形式データ
 | [07_test_strategy.md](./07_test_strategy.md) | テスト方針と品質ゲート |
 | [08_release_runbook.md](./08_release_runbook.md) | リリース・マイグレーション・復旧 |
 | [tasks/README.md](./tasks/README.md) | 日次運用の実行ハブ、作業計画、実装タスク |
+
+## コンペ別記録
+
+| ドキュメント | 内容 |
+|---|---|
+| [competitions/_template.md](./competitions/_template.md) | 新コンペ参加時のテンプレート |
+| [competitions/california_housing.md](./competitions/california_housing.md) | パイプライン検証用（練習データ）・スコア履歴 |
+
+新コンペに参加するときは `_template.md` をコピーして `competitions/<competition-slug>.md` を作成する。

@@ -10,14 +10,26 @@ make run      # California Housing で動作確認
 ## 新コンペ参加フロー
 
 ```bash
-# 1. env/config.yaml を更新（TARGET / ID_COL / OBJECTIVE / METRIC）
-# 2. data/raw/ にコンペのデータを配置
-# 3. 古いキャッシュを削除
-rm -rf data/interim/
+# 1コマンドで: download → ファイル正規化 → config.yaml 下書き表示 → competition doc 生成
+make init COMP=<competition-slug>
 
-# 4. ベースラインを実行
-make run
+# → 表示された config.yaml 下書きを conf/config.yaml にコピーして編集
+vim conf/config.yaml
+
+# 古いキャッシュを削除してベースラインを実行
+rm -rf data/interim/ data/features/ && make run
 ```
+
+`make init` が行うこと:
+
+| ステップ | 内容 |
+|---|---|
+| ① download | `data/raw/` にデータを展開 |
+| ② 正規化 | バラバラなファイル名を `train.csv` / `test.csv` に統一 |
+| ③ 分析 | TARGET 候補・ID 候補・欠損率を表示し `conf/config.yaml` の下書きを提示 |
+| ④ doc 生成 | `docs/competitions/<slug>.md` を `_template.md` から作成 |
+
+rules 未同意エラーが出た場合は `https://www.kaggle.com/c/<slug>/rules` でルールに同意してから再実行。
 
 ## 実験フロー（日常）
 
@@ -25,9 +37,9 @@ make run
 # 現在の実験を実行
 make run
 
-# 特定の実験を実行（履歴を再実行したいとき）
-make exp EXP=exp001_lgbm_base
-make exp EXP=exp002_catboost_base
+# 特定のノートブック実験を再実行（履歴を再実行したいとき）
+make nb NB=exp001_lgbm_base
+make nb NB=exp002_catboost_base
 
 # 実験ログを確認
 make logs
@@ -42,10 +54,10 @@ make logs
 from models.catboost_ import train_cv
 ```
 
-試した実験は `experiments/` にコピーして保存する:
+試した実験は `notebooks/` にコピーして保存する:
 
 ```bash
-cp run.py experiments/exp002_catboost_base.py
+cp run.py notebooks/exp002_catboost_base.py
 ```
 
 ## 特徴量を追加する
@@ -54,9 +66,10 @@ cp run.py experiments/exp002_catboost_base.py
 # 1. src/features/ に新ファイルを作る（既存ファイルは変更しない）
 touch src/features/ratios.py
 
-# 2. add_*() 関数を実装する
+# 2. add_*() 関数を実装する（X.copy() して返すこと ← FeatureTransformer Protocol）
 
 # 3. run.py に追加する
+# from features.ratios import add_ratio_features
 # X_train = add_ratio_features(X_train)
 # X_test  = add_ratio_features(X_test)
 
@@ -67,7 +80,7 @@ make run
 ## アンサンブル実験
 
 ```bash
-make exp EXP=exp003_ensemble_lgbm_cat
+make nb NB=exp003_ensemble_lgbm_cat
 ```
 
 ## 最終提出前チェック
@@ -76,10 +89,13 @@ make exp EXP=exp003_ensemble_lgbm_cat
 make run           # CV スコアを最終確認
 make logs          # 実験一覧を確認し最良 run_id を特定
 ls submission.csv  # 提出ファイルを確認
+
+# Kaggle CLI で提出
+make submit COMP=<competition-name> MSG="exp001 lgbm baseline cv=0.44498"
 ```
 
 ## 作業終了
 
 - 実験の観察・考察は `docs/tasks/active/` の task の `Notes` に残す。
 - 確定した知見（FE パターン等）は `docs/tasks/active/` から `docs/` 本体へ昇格する。
-- 実験ファイルは `experiments/` に保存して再現可能な状態を維持する。
+- 実験ファイルは `notebooks/` に保存して再現可能な状態を維持する。

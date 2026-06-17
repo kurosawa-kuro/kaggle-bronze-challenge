@@ -4,35 +4,37 @@
 
 | ファイル | 種別 | 内容 |
 |---|---|---|
-| `env/config.yaml` | 非機密設定 | TARGET / OBJECTIVE / METRIC / N_FOLDS / SEED / パス |
-| `env/secret.yaml` | ローカル秘密情報 | gitignore。Kaggle API トークン等 |
+| `conf/config.yaml` | 非機密設定 | TARGET / OBJECTIVE / METRIC / N_FOLDS / SEED / パス |
+| `conf/secret.yaml` | ローカル秘密情報 | gitignore。Kaggle API トークン等 |
 
-### env/config.yaml スキーマ
+### conf/config.yaml スキーマ
 
 ```yaml
-target: "MedHouseVal"       # 目的変数列名
-id_col: ~                   # ID 列名（なければ null）
-objective: "regression"     # regression / binary / multiclass
-metric: "rmse"              # rmse / auc / logloss / mape
+target: "MedHouseVal"           # 目的変数列名
+id_col: ~                       # ID 列名（なければ null）
+objective: "regression"         # regression / binary / multiclass
+metric: "rmse"                  # rmse / auc / logloss / mape
 
 n_folds: 5
 seed: 42
 
-data_raw: "data/raw"
-data_interim: "data/interim"
+data_raw: "data/raw"            # Bronze layer
+data_interim: "data/interim"    # Silver layer
+data_features: "data/features"  # Gold layer
 experiments_db: "data/experiments.db"
 ```
 
-## データファイル
+## データレイヤー（Databricks Medallion）
 
-| パス | 形式 | 説明 | gitignore |
-|---|---|---|---|
-| `data/raw/train.csv` | CSV | Kaggle 生データ（学習） | ✅ |
-| `data/raw/test.csv` | CSV | Kaggle 生データ（テスト） | ✅ |
-| `data/interim/train.parquet` | Parquet | 前処理済み学習データ | ✅ |
-| `data/interim/test.parquet` | Parquet | 前処理済みテストデータ | ✅ |
-| `data/experiments.db` | SQLite | 実験ログ | ✅ |
-| `submission.csv` | CSV | Kaggle 提出ファイル | ✅ |
+| レイヤー | パス | 形式 | 内容 | gitignore |
+|---|---|---|---|---|
+| **Bronze** | `data/raw/train.csv` | CSV | Kaggle 生データ（学習） | ✅ |
+| **Bronze** | `data/raw/test.csv` | CSV | Kaggle 生データ（テスト） | ✅ |
+| **Silver** | `data/interim/train.parquet` | Parquet | null 埋め・エンコード済み学習データ | ✅ |
+| **Silver** | `data/interim/test.parquet` | Parquet | null 埋め・エンコード済みテストデータ | ✅ |
+| **Gold** | `data/features/` | Parquet | 特徴量エンジニアリング済みデータ（将来利用） | ✅ |
+| — | `data/experiments.db` | SQLite | 実験ログ | ✅ |
+| — | `submission.csv` | CSV | Kaggle 提出ファイル | ✅ |
 
 ## 実験ログ（SQLite）
 
@@ -51,19 +53,22 @@ CREATE TABLE experiments (
 DuckDB で集計する例:
 
 ```python
-import duckdb
-duckdb.sql("SELECT run_id, cv_score, notes FROM read_csv('data/experiments.db')")
-# または make logs で表示
+import duckdb, sqlite3, pandas as pd
+conn = sqlite3.connect("data/experiments.db")
+df = pd.read_sql("SELECT * FROM experiments ORDER BY timestamp DESC", conn)
+duckdb.sql("SELECT run_id, cv_score, notes FROM df ORDER BY cv_score")
+# または make logs で直近 10 件を表示
 ```
 
-## 前処理・エンコーディング規約
+## 前処理・エンコーディング規約（pipelines/ingest.py）
 
 - **数値列の null**: 学習データの中央値で埋める（テストにも同じ値を使う）
 - **カテゴリ列の null**: `"__missing__"` で埋める
 - **カテゴリエンコーディング**: OrdinalEncoder（`handle_unknown="use_encoded_value"`, `unknown_value=-1`）
 - **fit は学習データのみ**: テストデータへの情報リークを防ぐ
+- 実装: `src/pipelines/ingest.encode()`
 
 ## 関連タスク
 
 - スキーマ変更・前処理の変更は task に目的・移行手順・検証方法を残す。
-- 新コンペへの転用時は `env/config.yaml` を更新し `data/interim/` を削除してから `make run` を実行する。
+- 新コンペへの転用時は `conf/config.yaml` を更新し `data/interim/` と `data/features/` を削除してから `make run` を実行する。

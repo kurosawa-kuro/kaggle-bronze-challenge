@@ -25,7 +25,7 @@ make logs   # 実験ログが記録されていること
 | 範囲 | 手段 | 備考 |
 |---|---|---|
 | パイプライン結合 | `make run` | エラーなく完了すること |
-| モデル切り替え | `make exp EXP=exp002_catboost_base` | 同様にエラーなく完了すること |
+| モデル切り替え | `make nb NB=exp002_catboost_base` | 同様にエラーなく完了すること |
 | 実験ログ記録 | `make logs` | run_id と cv_score が記録されていること |
 | FE 追加 | `make run` 後に CV Score を比較 | スコアが改善または維持されること |
 

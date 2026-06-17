@@ -135,14 +135,15 @@ X_test  = add_ratio_features(X_test)
 
 ## コンペ切り替え
 
-`env/config.yaml` の 4 項目を変えるだけ。データを `data/raw/` に置いて `data/interim/` を削除すれば `make run` が動く。
+`conf/config.yaml` の 4 項目を変えるだけ。データを `data/raw/` に置いて `data/interim/` を削除すれば `make run` が動く。
 
 ## 境界・方針
 
 - ソースは `src/` 配下（`PYTHONPATH=src` で import する）。
-- 非機密の設定は `env/config.yaml`。秘密情報は置かない。
-- データ（`data/raw/`, `data/interim/`, `data/experiments.db`）は gitignore。
-- Port/Adapter・strict 型注釈・本番 MLOps 水準のアーキテクチャは持ち込まない。
+- 非機密の設定は `conf/config.yaml`。秘密情報は置かない（`conf/secret.yaml` は gitignore）。
+- データ（`data/raw/`, `data/interim/`, `data/features/`, `data/experiments.db`）は gitignore。
+- DI・Composition Root・strict 型注釈・本番 MLOps 水準のアーキテクチャは持ち込まない。
+- インタフェース契約のみ `src/ports.py` の Protocol で明文化する。
 
 ## 関連タスク
 

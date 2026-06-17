@@ -4,7 +4,7 @@
 
 | 分類 | 意味 | 対応 |
 |---|---|---|
-| **データリーク（FE）** | 学習データ全体で fit し、テストに transform した | `_encode()` / `add_*()` は必ず train データのみで fit する |
+| **データリーク（FE）** | 学習データ全体で fit し、テストに transform した | `encode()` / `add_*()` は必ず train データのみで fit する |
 | **データリーク（CV）** | Fold 外の情報を使って学習した | KFold の分割後に fit する。Target Encoding は Fold 内で必ず行う |
 | **Public LB 過学習** | CV Score は良いが Private LB で大幅ダウン | CV Score を主指標にする。LB スコアに引きずられない |
 | **キャッシュ不整合** | `data/interim/` が古いまま残っている | コンペ切り替え時は `rm -rf data/interim/` してから `make run` |
@@ -30,7 +30,7 @@ Target Encoding を使う場合は必ず `category_encoders.TargetEncoder` を f
 
 ## ログ
 
-- `[preprocess]`, `[lgbm]`, `[catboost]`, `[xgboost]`, `[logger]`, `[predict]` プレフィックスで標準出力に出る。
+- `[ingest]`, `[lgbm]`, `[catboost]`, `[xgboost]`, `[logger]`, `[score]` プレフィックスで標準出力に出る。
 - 秘密情報（API トークン等）をログに出さない。
 - 実験ログは `data/experiments.db` に永続化される（`make logs` で確認）。
 
