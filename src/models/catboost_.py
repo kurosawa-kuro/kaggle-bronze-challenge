@@ -9,15 +9,10 @@ from config import METRIC, N_FOLDS, OBJECTIVE, SEED
 from pipelines.evaluate import cv_score
 from utils.logger import log_run
 
-_OBJECTIVE_MAP = {
+_LOSS_MAP = {
     "regression": "RMSE",
     "binary": "Logloss",
     "multiclass": "MultiClass",
-}
-_METRIC_MAP = {
-    "rmse": "RMSE",
-    "auc": "AUC",
-    "logloss": "Logloss",
 }
 
 
@@ -27,32 +22,37 @@ def train_cv(
     from catboost import CatBoostClassifier, CatBoostRegressor
 
     base_params = {
-        "iterations": 2000,
+        "iterations": 1000,
         "learning_rate": 0.05,
         "depth": 6,
         "early_stopping_rounds": 50,
-        "eval_metric": _METRIC_MAP.get(METRIC, "RMSE"),
         "random_seed": SEED,
         "verbose": 200,
     }
     merged = {**base_params, **(params or {})}
 
+    loss_fn = _LOSS_MAP[OBJECTIVE]
+    ModelCls = CatBoostRegressor if OBJECTIVE == "regression" else CatBoostClassifier
+
     splits = _splits(X_train, y_train)
-    oof = np.zeros(len(y_train))
+    n_classes = int(y_train.nunique()) if OBJECTIVE == "multiclass" else 1
+    oof = np.zeros((len(y_train), n_classes)) if n_classes > 1 else np.zeros(len(y_train))
     models = []
     fold_scores: list[float] = []
-
-    ModelCls = CatBoostRegressor if OBJECTIVE == "regression" else CatBoostClassifier
 
     for fold, (tr_idx, val_idx) in enumerate(splits):
         X_tr, X_val = X_train.iloc[tr_idx], X_train.iloc[val_idx]
         y_tr, y_val = y_train.iloc[tr_idx], y_train.iloc[val_idx]
 
-        model = ModelCls(loss_function=_OBJECTIVE_MAP[OBJECTIVE], **merged)
+        model = ModelCls(loss_function=loss_fn, **merged)
         model.fit(X_tr, y_tr, eval_set=(X_val, y_val))
-
-        oof[val_idx] = model.predict(X_val)
         models.append(model)
+
+        # multiclass は predict_proba で確率を取得（log_loss に必要）
+        if OBJECTIVE == "multiclass":
+            oof[val_idx] = model.predict_proba(X_val)
+        else:
+            oof[val_idx] = model.predict(X_val).flatten()
 
         score = cv_score(y_val.values, oof[val_idx])
         fold_scores.append(score)
