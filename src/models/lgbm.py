@@ -7,8 +7,8 @@ import numpy as np
 from sklearn.model_selection import KFold, StratifiedKFold
 
 from config import METRIC, N_FOLDS, OBJECTIVE, SEED
-from logger import log_run
-from metrics import cv_score
+from pipelines.evaluate import cv_score
+from utils.logger import log_run
 
 _PARAMS: dict = {
     "objective": OBJECTIVE,

@@ -1,10 +1,10 @@
 """exp002: CatBoost + ベースライン特徴量"""
 import sys; sys.path.insert(0, "src")
 
-from preprocess import load_data
-from features.base import make_features
+from pipelines.ingest import load_data
+from pipelines.featurize import make_features
 from models.catboost_ import train_cv
-from predict import make_submission
+from pipelines.score import make_submission
 
 train_df, test_df = load_data()
 X_train, y_train, X_test = make_features(train_df, test_df)

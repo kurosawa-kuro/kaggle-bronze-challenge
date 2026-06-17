@@ -16,18 +16,32 @@
 ```bash
 make setup              # uv venv 作成 + 依存インストール
 make run                # 現在の実験を実行 (run.py)
-make exp EXP=<名前>     # 特定の実験を実行 (experiments/<名前>.py)
+make nb NB=<名前>       # 特定のノートブックを実行 (notebooks/<名前>.py)
 make logs               # SQLite の実験ログを表示
 make clean              # submission.csv と __pycache__ を削除
 ```
 
-## アーキテクチャ
+## アーキテクチャ（Databricks パターン準拠）
 
-- 実験エントリポイントは `run.py`。モデルと特徴量の import を変えるだけで切り替わる。
-- モデルは `src/models/` 配下（lgbm / catboost_ / xgboost_ / ensemble）。全て同じシグネチャ。
-- 特徴量は `src/features/` 配下。新アイデアは新ファイルを追加するだけ。既存ファイルは変更しない。
-- データセット設定は `env/config.yaml`。コンペ切り替え時はここだけ変える。
-- 実験ログは `data/experiments.db`（SQLite）に自動記録される。
+```
+conf/config.yaml        ← コンペ切り替え時はここだけ変える
+src/
+  pipelines/
+    ingest.py           ← Bronze→Silver: データロード + エンコーディング
+    featurize.py        ← Silver→Gold: 特徴量エンジニアリング
+    evaluate.py         ← cv_score() 全モデル共用
+    score.py            ← 推論・submission.csv 生成
+  models/               ← lgbm / catboost_ / xgboost_ / ensemble（同一シグネチャ）
+  features/             ← add_*() FE 関数群（新アイデアはここにファイル追加）
+  utils/logger.py       ← SQLite 実験ログ
+  config.py             ← conf/config.yaml を定数化
+  ports.py              ← ModelTrainer / FeatureTransformer Protocol
+notebooks/              ← 実験スクリプト（1実験=1ファイル）
+data/
+  raw/                  ← Bronze layer（Kaggle 生データ）
+  interim/              ← Silver layer（前処理済み parquet）
+  features/             ← Gold layer（特徴量 parquet）
+```
 
 ## 作業ルール
 

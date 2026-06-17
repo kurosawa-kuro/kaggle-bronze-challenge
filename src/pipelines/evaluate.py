@@ -1,4 +1,4 @@
-"""CV スコア計算。全モデルで共用する。"""
+"""モデル評価メトリクス。全モデルで共用する。"""
 import numpy as np
 from sklearn.metrics import log_loss, mean_squared_error, roc_auc_score
 

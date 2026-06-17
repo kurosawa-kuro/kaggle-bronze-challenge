@@ -1,0 +1,20 @@
+# ===========================================
+# Kaggle パイプライン設定
+# コンペ切り替え時はここだけ変更する
+# ===========================================
+
+# --- データセット ---
+target: "MedHouseVal"       # 目的変数列名
+id_col: ~                   # ID 列名（なければ null）
+objective: "regression"     # regression / binary / multiclass
+metric: "rmse"              # rmse / auc / logloss / mape
+
+# --- 学習 ---
+n_folds: 5
+seed: 42
+
+# --- パス ---
+data_raw: "data/raw"          # Bronze layer
+data_interim: "data/interim"  # Silver layer
+data_features: "data/features" # Gold layer
+experiments_db: "data/experiments.db"

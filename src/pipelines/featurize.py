@@ -1,12 +1,10 @@
-"""ベースライン特徴量。生データをそのまま使う。
-新しいFEアイデアは features/ に別ファイルで追加する。例:
-  src/features/ratios.py  → add_ratio_features(X)
-  src/features/aggs.py    → add_agg_features(X)
+"""Silver → Gold: 特徴量エンジニアリングのエントリポイント。
+ベースライン特徴量を組み立てる。新しい FE は features/ に追加して run.py で呼ぶ。
 """
 import pandas as pd
 
-from preprocess import _encode
 from config import TARGET
+from pipelines.ingest import encode
 
 
 def make_features(
@@ -17,5 +15,5 @@ def make_features(
     X_train = train_df.drop(columns=[TARGET])
     X_test = test_df.copy()
 
-    X_train, X_test = _encode(X_train, X_test)
+    X_train, X_test = encode(X_train, X_test)
     return X_train, y_train, X_test

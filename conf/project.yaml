@@ -1,0 +1,9 @@
+# Project path/name source of truth.
+#
+# Edit this file after moving or renaming the project, then run:
+#   make render-project-config
+
+projectName: kaggle-bronze-challenge
+repoRoot: /home/ubuntu/repos/kaggle-bronze-challenge
+workspaceRoot: /home/ubuntu/repos
+homeDir: /home/ubuntu

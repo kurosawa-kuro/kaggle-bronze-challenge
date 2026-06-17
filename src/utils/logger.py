@@ -37,21 +37,14 @@ def log_run(run_id: str, cv_score: float, params: dict, notes: str = "") -> None
 
 
 def show_runs() -> None:
-    """直近 10 件を DuckDB で集計して表示する。"""
-    import duckdb
-
+    """直近 10 件を表示する。"""
     _init()
-    duckdb.sql(f"""
-        SELECT run_id, timestamp, cv_score, notes
-        FROM read_csv_auto('{EXPERIMENTS_DB}')
-    """)
-
     with sqlite3.connect(EXPERIMENTS_DB) as conn:
         rows = conn.execute(
             "SELECT run_id, timestamp, cv_score, notes FROM experiments ORDER BY timestamp DESC LIMIT 10"
         ).fetchall()
 
-    print(f"\n{'run_id':<20} {'timestamp':<28} {'cv_score':>10}  notes")
-    print("-" * 80)
+    print(f"\n{'run_id':<30} {'timestamp':<28} {'cv_score':>10}  notes")
+    print("-" * 90)
     for r in rows:
-        print(f"{r[0]:<20} {r[1]:<28} {r[2]:>10.5f}  {r[3]}")
+        print(f"{r[0]:<30} {r[1]:<28} {r[2]:>10.5f}  {r[3]}")

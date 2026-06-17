@@ -16,11 +16,17 @@ Thumbs.db
 !.env.*.example
 !.env.*.sample
 !.env.*.template
-env/secret.yaml
-env/secret.*.yaml
-!env/secret.example.yaml
-!env/secret.sample.yaml
-!env/secret.template.yaml
+conf/secret.yaml
+conf/secret.*.yaml
+!conf/secret.example.yaml
+!conf/secret.sample.yaml
+!conf/secret.template.yaml
+
+# Kaggle data (large files)
+data/raw/
+data/interim/
+data/features/
+submission.csv
 
 # Logs
 *.log

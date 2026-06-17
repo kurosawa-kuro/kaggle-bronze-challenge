@@ -2,7 +2,7 @@
 from pathlib import Path
 import yaml
 
-_cfg = yaml.safe_load((Path(__file__).parent.parent / "env" / "config.yaml").read_text())
+_cfg = yaml.safe_load((Path(__file__).parent.parent / "conf" / "config.yaml").read_text())
 
 TARGET: str = _cfg["target"]
 ID_COL: str | None = _cfg["id_col"]
@@ -14,4 +14,5 @@ SEED: int = _cfg["seed"]
 
 DATA_RAW: Path = Path(_cfg["data_raw"])
 DATA_INTERIM: Path = Path(_cfg["data_interim"])
+DATA_FEATURES: Path = Path(_cfg.get("data_features", "data/features"))
 EXPERIMENTS_DB: Path = Path(_cfg["experiments_db"])

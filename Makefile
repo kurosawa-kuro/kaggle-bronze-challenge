@@ -1,4 +1,4 @@
-.PHONY: setup run exp logs clean
+.PHONY: setup run nb logs clean
 
 VENV   := .venv
 PYTHON := $(VENV)/bin/python
@@ -14,13 +14,13 @@ setup:
 run:
 	$(PYTHON) run.py
 
-# 特定の実験を実行: make exp EXP=exp002_catboost_base
-exp:
-	$(PYTHON) experiments/$(EXP).py
+# 特定のノートブック実験を実行: make nb NB=exp002_catboost_base
+nb:
+	$(PYTHON) notebooks/$(NB).py
 
 # 実験ログを表示
 logs:
-	PYTHONPATH=src $(PYTHON) -c "from logger import show_runs; show_runs()"
+	PYTHONPATH=src $(PYTHON) -c "from utils.logger import show_runs; show_runs()"
 
 # 生成物を削除
 clean:
