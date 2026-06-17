@@ -1,20 +1,19 @@
 # ===========================================
-# プロジェクト固有設定
-# 環境変数で個別にオーバーライド可能
-# ローカル秘密情報は env/secret.yaml、共有・本番クレデンシャルは Doppler で管理 (doppler.yaml)
+# Kaggle パイプライン設定
+# コンペ切り替え時はここだけ変更する
 # ===========================================
 
-# --- アプリケーション ---
-projectName: <your-project>
-appEnv: local
-port: 8080
-logLevel: info
+# --- データセット ---
+target: "MedHouseVal"       # 目的変数列名
+id_col: ~                   # ID 列名（なければ null）
+objective: "regression"     # regression / binary / multiclass
+metric: "rmse"              # rmse / auc / logloss / mape
 
-# --- サーバー ---
-server:
-  timeout: 60
-  corsAllowAll: true
+# --- 学習 ---
+n_folds: 5
+seed: 42
 
-# --- 機能フラグ ---
-# authEnabled: false
-# rateLimitPerMinute: 1000
+# --- パス ---
+data_raw: "data/raw"
+data_interim: "data/interim"
+experiments_db: "data/experiments.db"

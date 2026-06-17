@@ -1,39 +1,28 @@
-.PHONY: setup build run dev test fmt lint clean
+.PHONY: setup run exp logs clean
 
-# Application
-APP_NAME := <your-project>
+VENV   := .venv
+PYTHON := $(VENV)/bin/python
+UV     := uv
 
-# 初期セットアップ (依存取得・ビルド)
-setup: deps build
-	@echo "Setup complete."
+# 初期セットアップ: venv 作成 + 依存インストール
+setup:
+	$(UV) venv $(VENV)
+	$(UV) pip install -r requirements.txt --python $(VENV)/bin/python
+	@echo "Setup complete. Run: make run"
 
-deps:
-	@echo "TODO: 依存をインストール (例: npm install / cargo fetch / pip install -r requirements.txt)"
-
-# ビルド
-build:
-	@echo "TODO: ビルドコマンドを記述"
-
-# 実行
+# 現在の実験を実行 (run.py)
 run:
-	@echo "TODO: 実行コマンドを記述"
+	$(PYTHON) run.py
 
-# 開発 (ホットリロード)
-dev:
-	@echo "TODO: 開発サーバー / watch コマンドを記述"
+# 特定の実験を実行: make exp EXP=exp002_catboost_base
+exp:
+	$(PYTHON) experiments/$(EXP).py
 
-# テスト
-test:
-	@echo "TODO: テストコマンドを記述"
+# 実験ログを表示
+logs:
+	PYTHONPATH=src $(PYTHON) -c "from logger import show_runs; show_runs()"
 
-# 整形
-fmt:
-	@echo "TODO: フォーマッタを記述"
-
-# 静的解析
-lint:
-	@echo "TODO: リンタを記述"
-
-# クリーンアップ
+# 生成物を削除
 clean:
-	@echo "TODO: 成果物削除コマンドを記述"
+	rm -f submission.csv
+	find . -name "__pycache__" -type d | xargs rm -rf
