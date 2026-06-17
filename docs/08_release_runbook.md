@@ -1,25 +1,60 @@
-# 08 リリース Runbook
+# 08 提出 Runbook
 
-## リリース前
+Kaggle における「リリース」= 最終提出ファイルの選択と提出。
+
+## 提出前チェックリスト
 
 ```bash
-make test
-git status --short
+make run      # 最終 CV Score を確認
+make logs     # 全実験ログを確認し最良 run_id を特定
+ls -lh submission.csv   # ファイルが存在し、サイズが正常なこと
+head submission.csv     # ヘッダと値の形式を確認
 ```
 
-- `docs/tasks/active/` にリリース前の未完了 blocker が残っていないことを確認する。
-- リリース対象 task の `Verification` に検証結果が残っていることを確認する。
-- 未解決事項がある場合は、release blocker か follow-up かを task に明記する。
+確認項目:
 
-## デプロイ
+- [ ] `submission.csv` のヘッダがコンペ規定と一致している
+- [ ] 行数がテストデータの行数と一致している（`wc -l submission.csv`）
+- [ ] 値に NaN / inf が含まれていない
+- [ ] `data/experiments.db` に最終実験が記録されている
 
-TODO
+## 最終提出の選択（2本戦略）
 
-## ロールバック
+Kaggle は締切までに 2 本の提出を選択できる（デフォルトは最終 2 提出）。
 
-TODO
+| 提出 | 選び方 |
+|---|---|
+| **提出 A** | CV Score が最良の実験 (`make logs` で確認) |
+| **提出 B** | Public LB Score が最良の実験 |
 
-## リリース後タスク
+両者が同じなら 1 本で問題ない。
 
-- リリース後の確認事項は `docs/tasks/active/` または `docs/tasks/backlog/` に残す。
-- 恒久的な運用手順になったものは `docs/runbooks/` へ昇格する。
+## コンペ切り替え手順
+
+```bash
+# 1. env/config.yaml を更新
+vim env/config.yaml
+
+# 2. 古いキャッシュを削除
+rm -rf data/interim/
+
+# 3. data/raw/ に新しいデータを配置
+cp ~/Downloads/train.csv data/raw/
+cp ~/Downloads/test.csv data/raw/
+
+# 4. 動作確認
+make run
+```
+
+## ロールバック（前の実験に戻す）
+
+```bash
+# 過去の実験を再実行して submission.csv を上書き
+make exp EXP=exp001_lgbm_base
+```
+
+## 提出後タスク
+
+- Public LB スコアと CV Score の差を `docs/tasks/active/` に記録する。
+- 乖離が大きい場合（`|CV - LB| > 0.05`）は原因を調査してリーク防止策を `docs/06_error_policy.md` に追記する。
+- 結果（ブロンズ取得 / 未達）と振り返りを task に残す。

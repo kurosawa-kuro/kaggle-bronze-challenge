@@ -14,26 +14,26 @@
 ## コマンド
 
 ```bash
-make setup    # 初期セットアップ (依存取得 + ビルド)
-make build    # ビルド
-make run      # 実行
-make dev      # 開発サーバー / ホットリロード
-make test     # テスト
-make fmt      # フォーマット
-make lint     # 静的解析
+make setup              # uv venv 作成 + 依存インストール
+make run                # 現在の実験を実行 (run.py)
+make exp EXP=<名前>     # 特定の実験を実行 (experiments/<名前>.py)
+make logs               # SQLite の実験ログを表示
+make clean              # submission.csv と __pycache__ を削除
 ```
 
 ## アーキテクチャ
 
-- ソースは `src/` 配下に置く。
-- 非機密の設定は `env/config.yaml`、ローカル秘密情報は `env/secret.yaml`、チーム共有・本番クレデンシャルは Doppler (`doppler.yaml`) で管理する。
-- 設計・運用ドキュメントは `docs/` 配下。権威順位と更新規約は `docs/00_index.md` に従う。
-- パス別ルールは `.claude/rules/` 配下に置く。
-- 一回性の作業計画は `docs/tasks/`、繰り返し使う作業手順は `.claude/skills/` に置く。
+- 実験エントリポイントは `run.py`。モデルと特徴量の import を変えるだけで切り替わる。
+- モデルは `src/models/` 配下（lgbm / catboost_ / xgboost_ / ensemble）。全て同じシグネチャ。
+- 特徴量は `src/features/` 配下。新アイデアは新ファイルを追加するだけ。既存ファイルは変更しない。
+- データセット設定は `env/config.yaml`。コンペ切り替え時はここだけ変える。
+- 実験ログは `data/experiments.db`（SQLite）に自動記録される。
 
 ## 作業ルール
 
 - 推測でコードを書かない。コマンドを書いたら実際に実行して確認する。
-- 仕様変更は連動する `docs/` とテストを同一 PR で直す。drift を作らない。
+- 仕様変更は連動する `docs/` を同じタイミングで直す。drift を作らない。
 - 既存の関数・ユーティリティ・パターンを優先的に再利用する。
-- task note を仕様の正本にしない。確定内容は `docs/specs/`、`docs/adr/`、`docs/runbooks/` に昇格する。
+- `make run` が通ることが最低品質ゲート。
+- Port/Adapter・型安全・本番 MLOps 水準の設計は持ち込まない。ノートブックファーストで速く回す。
+- LLM / RAG / Deep Learning の提案はしない。LightGBM 主軸で解く。
