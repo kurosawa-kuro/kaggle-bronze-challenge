@@ -1,0 +1,68 @@
+setup:
+  project: apps
+  config: dev
+
+# =========================
+# シークレット管理方針
+# =========================
+# チーム共有・本番クレデンシャル類は Doppler で集中管理する。
+# 非機密の設定値は env/config.yaml、ローカルだけの秘密情報は env/secret.yaml に置く。
+# env/secret.yaml は .gitignore で除外し、コミットしない。
+# 値は登録せず、キー名と用途だけをコメントで管理する。
+#
+# 命名規則: <CATEGORY>_<SERVICE>_[QUALIFIER…]_<TYPE>（docs/specs/仕様書.md §1）。
+# 正本は Doppler。本カタログは apps/dev の実在キー（2026-06-12 時点・25件）の写し。
+
+# =========================
+# AI / LLM
+# =========================
+# AI_DEEPSEEK_API_KEY
+# AI_OPENAI_API_KEY
+# AI_PERPLEXITY_API_KEY
+
+# =========================
+# AUTH（認証・ログイン）
+# =========================
+# AUTH_N8N_OWNER_EMAIL          # n8n オーナーアカウント(保管用・env消費なし)
+# AUTH_N8N_OWNER_PASSWORD       # 同上
+
+# =========================
+# COOKIE（スクレイピング用 Cookie / 実行時に env/secret/ へ materialize）
+# =========================
+# COOKIE_X_JSON
+# COOKIE_YT_JSON
+
+# =========================
+# DB（データベース）
+# =========================
+# DB_NEON_NEWS_APP_URI          # Neon: ニュース作業DB
+# DB_NEON_ADMIN_URI             # Neon: 管理接続
+# DB_NEON_API_KEY               # Neon API
+# DB_NEON_PUBLIC_APP_REF_URI    # Neon: public-app-ref(準備中・コード未消費)
+# DB_TURSO_URL                  # Turso 共有マスター
+# DB_TURSO_AUTH_TOKEN           # 同上
+# DB_TURSO_HERMES_URL           # hermes-n8n 専用 Turso(共有と別値)
+# DB_TURSO_HERMES_AUTH_TOKEN    # 同上
+
+# =========================
+# INFRA（インフラ / 運用）
+# =========================
+# INFRA_DOPPLER_AUTH_TOKEN
+# INFRA_NGROK_AUTH_TOKEN        # 準備中(librechat skeleton)
+# INFRA_PGADMIN_USER
+# INFRA_PGADMIN_PASSWORD
+
+# =========================
+# NOTIFY（通知 / 外部連携）
+# =========================
+# NOTIFY_DISCORD_NEWS_WEBHOOK_URL
+# NOTIFY_DISCORD_NEWS_FAVORITE_WEBHOOK_URL
+# NOTIFY_DISCORD_NEWS_SIGNAL_WEBHOOK_URL
+# NOTIFY_DISCORD_WARNING_WEBHOOK_URL
+# NOTIFY_DISCORD_YOUTUBE_SUMMARY_WEBHOOK_URL
+# NOTIFY_DISCORD_HERMES_WEBHOOK_URL    # hermes-n8n 専用(共有と別値)
+
+# =========================
+# Doppler 初期化コマンド
+# =========================
+# doppler setup --project apps --config dev --no-interactive
