@@ -42,6 +42,7 @@ seed: 42
 | run_id | モデル | CV logloss | LB accuracy | 変更内容 | 備考 |
 |---|---|---|---|---|---|
 | 20260617_064314_lgbm_a076 | LightGBM | 0.09326 | 0.95499 | ベースライン | id 列を特徴量に含む |
+| 20260617_071002_lgbm_2684 | LightGBM | 0.09215 | 0.95553 | id 列を特徴量から除外 | CV -0.00111 / LB +0.00054 |
 
 `make logs` で最新 run_id を確認できる。
 
@@ -56,12 +57,13 @@ seed: 42
 | 日付 | run_id | CV logloss | LB accuracy | 備考 |
 |---|---|---|---|---|
 | 2026-06-17 | 20260617_064314_lgbm_a076 | 0.09326 | 0.95499 | 初提出・ベースライン |
+| 2026-06-17 | 20260617_071002_lgbm_2684 | 0.09215 | 0.95553 | id 列除外 |
 
 ## 次の打ち手
 
 優先順位順:
 
-1. **`id` 列を特徴量から除外** → `featurize.py` で ID_COL を drop
+1. ~~**`id` 列を特徴量から除外**~~ ✅ CV 0.09326 → 0.09215
 2. **Optuna チューニング** → num_leaves / min_child_samples / learning_rate
 3. **FE**: `spectral_type` × `galaxy_population` の交差特徴、redshift のビニング
 4. **CatBoost アンサンブル** → LightGBM + CatBoost の平均
