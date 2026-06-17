@@ -23,9 +23,8 @@ conf/secret.*.yaml
 !conf/secret.template.yaml
 
 # Kaggle data (large files)
-data/raw/
-data/interim/
-data/features/
+# コンペごとのサブフォルダ構造: data/<comp>/raw|interim|features/
+data/*/
 submission.csv
 
 # Logs

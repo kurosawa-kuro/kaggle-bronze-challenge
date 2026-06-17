@@ -38,17 +38,14 @@ make submit COMP=<competition-name> MSG="exp001: lgbm baseline  CV=0.44498"
 ## コンペ切り替え手順
 
 ```bash
-# 1. conf/config.yaml を更新
+# 1コマンドで download → ファイル正規化 → config.yaml 下書き表示 → doc 生成
+make init COMP=<competition-slug>
+
+# 2. 表示された下書きで conf/config.yaml を更新
 vim conf/config.yaml
 
-# 2. 古いキャッシュを削除（Silver / Gold レイヤー）
-rm -rf data/interim/ data/features/
-
-# 3. Kaggle CLI でデータ取得
-make download COMP=<competition-name>
-
-# 4. 動作確認
-make run
+# 3. 古いキャッシュを削除して動作確認
+rm -rf data/interim/ data/features/ && make run
 ```
 
 ## ロールバック（前の実験に戻す）

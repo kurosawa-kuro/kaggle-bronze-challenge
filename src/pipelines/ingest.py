@@ -5,22 +5,37 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import OrdinalEncoder
 
-from config import DATA_INTERIM, TARGET
+from config import DATA_INTERIM, DATA_RAW, TARGET
 
 
 def load_data() -> tuple[pd.DataFrame, pd.DataFrame]:
     """(train_df, test_df) を返す。
 
-    California Housing モード: sklearn から取得し 8:2 分割する。
-    Kaggle コンペ転用時: data/raw/train.csv と test.csv を読む。
+    1. data/<comp>/interim/train.parquet があれば即返す（キャッシュ）
+    2. data/<comp>/raw/train.csv があれば Kaggle CSV モード
+    3. いずれもなければ California Housing（練習用）
     """
-    raw_train = DATA_INTERIM / "train.parquet"
-    raw_test = DATA_INTERIM / "test.parquet"
+    if (DATA_INTERIM / "train.parquet").exists():
+        return (
+            pd.read_parquet(DATA_INTERIM / "train.parquet"),
+            pd.read_parquet(DATA_INTERIM / "test.parquet"),
+        )
 
-    if raw_train.exists():
-        return pd.read_parquet(raw_train), pd.read_parquet(raw_test)
+    if (DATA_RAW / "train.csv").exists():
+        return _load_from_csv()
 
     return _load_california_housing()
+
+
+def _load_from_csv() -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Kaggle コンペモード: data/<comp>/raw/train.csv を読む"""
+    train_df = pd.read_csv(DATA_RAW / "train.csv")
+    test_df = pd.read_csv(DATA_RAW / "test.csv")
+    DATA_INTERIM.mkdir(parents=True, exist_ok=True)
+    train_df.to_parquet(DATA_INTERIM / "train.parquet", index=False)
+    test_df.to_parquet(DATA_INTERIM / "test.parquet", index=False)
+    print(f"[ingest] Kaggle CSV: train={len(train_df)}  test={len(test_df)}")
+    return train_df, test_df
 
 
 def _load_california_housing() -> tuple[pd.DataFrame, pd.DataFrame]:

@@ -30,8 +30,8 @@ init:
 # Kaggle データ取得: make download COMP=house-prices
 # Doppler の ML_KAGGLE_TOKEN を KAGGLE_API_TOKEN にマッピングして kaggle CLI へ渡す
 download:
-	mkdir -p data/raw
-	doppler run -- sh -c 'KAGGLE_API_TOKEN="$$ML_KAGGLE_TOKEN" $(VENV)/bin/kaggle competitions download -c $(COMP) -p data/raw'
+	mkdir -p data/$(COMP)/raw
+	doppler run -- sh -c 'KAGGLE_API_TOKEN="$$ML_KAGGLE_TOKEN" $(VENV)/bin/kaggle competitions download -c $(COMP) -p data/$(COMP)/raw'
 
 # Kaggle 提出: make submit COMP=house-prices MSG="exp001 lgbm baseline cv=0.44498"
 submit:

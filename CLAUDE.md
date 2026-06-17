@@ -14,16 +14,21 @@
 ## コマンド
 
 ```bash
-make setup              # uv venv 作成 + 依存インストール
-make run                # 現在の実験を実行 (run.py)
-make nb NB=<名前>       # 特定のノートブックを実行 (notebooks/<名前>.py)
-make logs               # SQLite の実験ログを表示
-make clean              # submission.csv と __pycache__ を削除
+make setup                        # uv venv 作成 + 依存インストール
+make init COMP=<slug>             # 新コンペ初期化（download→正規化→config下書き→doc生成）
+make run                          # 現在の実験を実行 (run.py)
+make nb NB=<名前>                 # 特定のノートブックを実行 (notebooks/<名前>.py)
+make logs                         # SQLite の実験ログを表示
+make download COMP=<slug>         # データのみダウンロード（zip展開なし）
+make submit COMP=<slug> MSG=<msg> # Kaggle へ提出
+make clean                        # submission.csv と __pycache__ を削除
 ```
 
 ## アーキテクチャ（Databricks パターン準拠）
 
 ```
+scripts/
+  init_competition.py   ← make init の実体（download→正規化→分析→doc生成）
 conf/config.yaml        ← コンペ切り替え時はここだけ変える
 src/
   pipelines/
@@ -38,9 +43,11 @@ src/
   ports.py              ← ModelTrainer / FeatureTransformer Protocol
 notebooks/              ← 実験スクリプト（1実験=1ファイル）
 data/
-  raw/                  ← Bronze layer（Kaggle 生データ）
-  interim/              ← Silver layer（前処理済み parquet）
-  features/             ← Gold layer（特徴量 parquet）
+  <comp>/               ← コンペごとに分離（例: data/titanic/）
+    raw/                ← Bronze layer（Kaggle 生データ）
+    interim/            ← Silver layer（前処理済み parquet）
+    features/           ← Gold layer（特徴量 parquet）
+  experiments.db        ← 全コンペ共通
 ```
 
 ## 作業ルール

@@ -29,8 +29,18 @@ def train_cv(
 ) -> tuple[np.ndarray, list[lgb.Booster]]:
     lgb_params = {**_PARAMS, **(params or {})}
 
+    # multiclass: num_class 自動設定 + LightGBM の metric 名を合わせる
+    if OBJECTIVE == "multiclass":
+        if "num_class" not in lgb_params:
+            lgb_params["num_class"] = int(y_train.nunique())
+        if lgb_params.get("metric") == "logloss":
+            lgb_params["metric"] = "multi_logloss"
+
+    num_class = lgb_params.get("num_class", 1)
     splits = _splits(X_train, y_train)
-    oof = np.zeros(len(y_train))
+
+    # multiclass は (n_samples, n_classes)、それ以外は (n_samples,)
+    oof = np.zeros((len(y_train), num_class)) if num_class > 1 else np.zeros(len(y_train))
     models: list[lgb.Booster] = []
     fold_scores: list[float] = []
 

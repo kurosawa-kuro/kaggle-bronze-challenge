@@ -3,6 +3,8 @@
 ## Databricks パターン準拠の構造
 
 ```
+scripts/
+  init_competition.py  ← make init の実体（download→正規化→分析→doc生成）
 conf/                    ← 設定（コンペ切り替え時はここだけ変える）
   config.yaml
 src/
@@ -26,10 +28,11 @@ notebooks/               ← 実験スクリプト（1実験=1ファイル）
   exp002_catboost_base.py
   exp003_ensemble_lgbm_cat.py
 data/
-  raw/                   ← Bronze layer（Kaggle 生データ、gitignore）
-  interim/               ← Silver layer（前処理済み parquet、gitignore）
-  features/              ← Gold layer（特徴量 parquet、gitignore）
-  experiments.db         ← 実験ログ SQLite
+  <comp>/                ← コンペごとに分離（再ダウンロード不要でコンペ切り替え可）
+    raw/                 ← Bronze layer（Kaggle 生データ、gitignore）
+    interim/             ← Silver layer（前処理済み parquet、gitignore）
+    features/            ← Gold layer（特徴量 parquet、gitignore）
+  experiments.db         ← 実験ログ SQLite（全コンペ共通）
 run.py                   ← 現在の実験エントリポイント
 ```
 
@@ -135,7 +138,7 @@ X_test  = add_ratio_features(X_test)
 
 ## コンペ切り替え
 
-`conf/config.yaml` の 4 項目を変えるだけ。データを `data/raw/` に置いて `data/interim/` を削除すれば `make run` が動く。
+`make init COMP=<slug>` が download・ファイル正規化・config.yaml 下書き表示・competition doc 生成を1コマンドで行う（`scripts/init_competition.py`）。
 
 ## 境界・方針
 

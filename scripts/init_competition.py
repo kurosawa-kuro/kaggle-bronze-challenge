@@ -14,15 +14,14 @@ import pandas as pd
 import yaml
 
 ROOT = Path(__file__).parent.parent
-RAW_DIR = ROOT / "data" / "raw"
 KAGGLE_BIN = Path(sys.executable).parent / "kaggle"
 
 
-def download(comp: str) -> None:
+def download(comp: str, raw_dir: Path) -> None:
     print(f"[init] ① {comp} をダウンロード中 ...")
     result = subprocess.run(
         [str(KAGGLE_BIN), "competitions", "download",
-         "-c", comp, "-p", str(RAW_DIR)],
+         "-c", comp, "-p", str(raw_dir)],
     )
     if result.returncode != 0:
         print(
@@ -31,34 +30,30 @@ def download(comp: str) -> None:
         )
         sys.exit(1)
 
-    # zip を展開して元ファイルを削除
-    for zf in list(RAW_DIR.glob("*.zip")):
+    for zf in list(raw_dir.glob("*.zip")):
         print(f"  展開: {zf.name}")
         with zipfile.ZipFile(zf) as z:
-            z.extractall(RAW_DIR)
+            z.extractall(raw_dir)
         zf.unlink()
 
 
-def _find_csv(keyword: str, exclude: str | None = None) -> Path | None:
-    """keyword を含む最大サイズの CSV を返す"""
+def _find_csv(raw_dir: Path, keyword: str, exclude: str | None = None) -> Path | None:
     candidates = [
-        p for p in RAW_DIR.rglob("*.csv")
+        p for p in raw_dir.rglob("*.csv")
         if keyword in p.stem.lower()
         and (exclude is None or exclude not in p.stem.lower())
     ]
     return max(candidates, key=lambda p: p.stat().st_size) if candidates else None
 
 
-def normalize() -> tuple[Path, Path]:
-    """train/test CSV を data/raw/ 直下に正規化コピーする"""
+def normalize(raw_dir: Path) -> tuple[Path, Path]:
     print("\n[init] ② ファイル配置を正規化中 ...")
-    train_src = _find_csv("train")
-    test_src = _find_csv("test", exclude="sample")
+    train_src = _find_csv(raw_dir, "train")
+    test_src = _find_csv(raw_dir, "test", exclude="sample")
 
-    # fallback: "train"/"test" が含まれない命名の場合、サイズ上位2件を使う
     if train_src is None or test_src is None:
         all_csv = sorted(
-            [p for p in RAW_DIR.rglob("*.csv") if "sample" not in p.stem.lower()],
+            [p for p in raw_dir.rglob("*.csv") if "sample" not in p.stem.lower()],
             key=lambda p: p.stat().st_size,
             reverse=True,
         )
@@ -66,8 +61,8 @@ def normalize() -> tuple[Path, Path]:
             train_src = train_src or all_csv[0]
             test_src = test_src or all_csv[1]
 
-    dst_train = RAW_DIR / "train.csv"
-    dst_test = RAW_DIR / "test.csv"
+    dst_train = raw_dir / "train.csv"
+    dst_test = raw_dir / "test.csv"
 
     for src, dst, label in [(train_src, dst_train, "train"), (test_src, dst_test, "test")]:
         if src is None:
@@ -76,15 +71,13 @@ def normalize() -> tuple[Path, Path]:
             print(f"  {label}: {src.name} （移動不要）")
         else:
             shutil.copy2(src, dst)
-            print(f"  {label}: {src.relative_to(RAW_DIR)} → {dst.name}")
+            print(f"  {label}: {src.relative_to(raw_dir)} → {dst.name}")
 
     return dst_train, dst_test
 
 
 def analyze(train_path: Path, test_path: Path) -> None:
-    """TARGET 候補・config.yaml 下書きを表示する"""
     print("\n[init] ③ データ分析中 ...")
-
     train = pd.read_csv(train_path)
     test = pd.read_csv(test_path) if test_path.exists() else None
 
@@ -112,7 +105,6 @@ def analyze(train_path: Path, test_path: Path) -> None:
         for col, rate in miss_top.items():
             print(f"    {col:<30} {rate * 100:.1f}%")
 
-    # objective / metric を自動推定
     target = target_candidates[0] if len(target_candidates) == 1 else None
     objective, metric = "regression", "rmse"
     if target:
@@ -123,15 +115,13 @@ def analyze(train_path: Path, test_path: Path) -> None:
             objective, metric = "multiclass", "logloss"
 
     draft = {
+        "comp": train_path.parent.parent.name,
         "target": target or "REPLACE_ME",
         "id_col": (id_candidates[0] if id_candidates else None),
         "objective": objective,
         "metric": metric,
         "n_folds": 5,
         "seed": 42,
-        "data_raw": "data/raw",
-        "data_interim": "data/interim",
-        "data_features": "data/features",
         "experiments_db": "data/experiments.db",
     }
     print("\n  ─── conf/config.yaml 下書き ─────────────────────────")
@@ -141,7 +131,6 @@ def analyze(train_path: Path, test_path: Path) -> None:
 
 
 def create_doc(comp: str) -> None:
-    """_template.md から competition ドキュメントを生成する"""
     print("\n[init] ④ コンペドキュメントを生成中 ...")
     template = ROOT / "docs" / "competitions" / "_template.md"
     dest = ROOT / "docs" / "competitions" / f"{comp}.md"
@@ -161,17 +150,18 @@ def main() -> None:
         sys.exit(1)
 
     comp = sys.argv[1]
-    RAW_DIR.mkdir(parents=True, exist_ok=True)
+    raw_dir = ROOT / "data" / comp / "raw"
+    raw_dir.mkdir(parents=True, exist_ok=True)
 
-    download(comp)
-    normalize()
-    analyze(RAW_DIR / "train.csv", RAW_DIR / "test.csv")
+    download(comp, raw_dir)
+    normalize(raw_dir)
+    analyze(raw_dir / "train.csv", raw_dir / "test.csv")
     create_doc(comp)
 
     print(f"""
 [init] 完了。次のステップ:
   1. conf/config.yaml を上記の下書きで更新
-  2. rm -rf data/interim/ data/features/
+  2. rm -rf data/{comp}/interim/ data/{comp}/features/
   3. make run
 """)
 

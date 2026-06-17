@@ -1,8 +1,10 @@
-"""コンペ切り替え時はここだけ変更する。"""
+"""コンペ切り替え時は conf/config.yaml の comp と4項目だけ変更する。"""
 from pathlib import Path
 import yaml
 
 _cfg = yaml.safe_load((Path(__file__).parent.parent / "conf" / "config.yaml").read_text())
+
+COMP: str = _cfg["comp"]
 
 TARGET: str = _cfg["target"]
 ID_COL: str | None = _cfg["id_col"]
@@ -12,7 +14,8 @@ METRIC: str = _cfg["metric"]         # rmse / auc / logloss / mape
 N_FOLDS: int = _cfg["n_folds"]
 SEED: int = _cfg["seed"]
 
-DATA_RAW: Path = Path(_cfg["data_raw"])
-DATA_INTERIM: Path = Path(_cfg["data_interim"])
-DATA_FEATURES: Path = Path(_cfg.get("data_features", "data/features"))
-EXPERIMENTS_DB: Path = Path(_cfg["experiments_db"])
+# データパスは comp から自動導出
+DATA_RAW: Path = Path("data") / COMP / "raw"
+DATA_INTERIM: Path = Path("data") / COMP / "interim"
+DATA_FEATURES: Path = Path("data") / COMP / "features"
+EXPERIMENTS_DB: Path = Path(_cfg.get("experiments_db", "data/experiments.db"))

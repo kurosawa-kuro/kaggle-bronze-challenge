@@ -4,36 +4,38 @@
 
 | ファイル | 種別 | 内容 |
 |---|---|---|
-| `conf/config.yaml` | 非機密設定 | TARGET / OBJECTIVE / METRIC / N_FOLDS / SEED / パス |
+| `conf/config.yaml` | 非機密設定 | COMP / TARGET / OBJECTIVE / METRIC / N_FOLDS / SEED |
 | `conf/secret.yaml` | ローカル秘密情報 | gitignore。Kaggle API トークン等 |
 
 ### conf/config.yaml スキーマ
 
 ```yaml
-target: "MedHouseVal"           # 目的変数列名
-id_col: ~                       # ID 列名（なければ null）
-objective: "regression"         # regression / binary / multiclass
-metric: "rmse"                  # rmse / auc / logloss / mape
+comp: "titanic"                 # コンペ識別子。パスに使用: data/<comp>/raw/ など
+target: "Survived"              # 目的変数列名
+id_col: "PassengerId"           # ID 列名（なければ null）
+objective: "binary"             # regression / binary / multiclass
+metric: "auc"                   # rmse / auc / logloss / mape
 
 n_folds: 5
 seed: 42
 
-data_raw: "data/raw"            # Bronze layer
-data_interim: "data/interim"    # Silver layer
-data_features: "data/features"  # Gold layer
-experiments_db: "data/experiments.db"
+experiments_db: "data/experiments.db"  # 全コンペ共通
 ```
+
+データパス（`data_raw` 等）は `src/config.py` が `comp` から自動導出するため config.yaml への記載不要。
 
 ## データレイヤー（Databricks Medallion）
 
+コンペごとに `data/<comp>/` 以下に分離して保持する。再ダウンロード不要でコンペを切り替えられる。
+
 | レイヤー | パス | 形式 | 内容 | gitignore |
 |---|---|---|---|---|
-| **Bronze** | `data/raw/train.csv` | CSV | Kaggle 生データ（学習） | ✅ |
-| **Bronze** | `data/raw/test.csv` | CSV | Kaggle 生データ（テスト） | ✅ |
-| **Silver** | `data/interim/train.parquet` | Parquet | null 埋め・エンコード済み学習データ | ✅ |
-| **Silver** | `data/interim/test.parquet` | Parquet | null 埋め・エンコード済みテストデータ | ✅ |
-| **Gold** | `data/features/` | Parquet | 特徴量エンジニアリング済みデータ（将来利用） | ✅ |
-| — | `data/experiments.db` | SQLite | 実験ログ | ✅ |
+| **Bronze** | `data/<comp>/raw/train.csv` | CSV | Kaggle 生データ（学習） | ✅ |
+| **Bronze** | `data/<comp>/raw/test.csv` | CSV | Kaggle 生データ（テスト） | ✅ |
+| **Silver** | `data/<comp>/interim/train.parquet` | Parquet | null 埋め・エンコード済み学習データ | ✅ |
+| **Silver** | `data/<comp>/interim/test.parquet` | Parquet | null 埋め・エンコード済みテストデータ | ✅ |
+| **Gold** | `data/<comp>/features/` | Parquet | 特徴量エンジニアリング済みデータ（将来利用） | ✅ |
+| — | `data/experiments.db` | SQLite | 実験ログ（全コンペ共通） | ✅ |
 | — | `submission.csv` | CSV | Kaggle 提出ファイル | ✅ |
 
 ## 実験ログ（SQLite）
