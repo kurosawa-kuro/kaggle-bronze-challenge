@@ -30,6 +30,9 @@ make hp-tune CONFIG=<path> RUN_ID=<id> MAX_TRIALS=20 PARALLEL=4  # Vertex HP Tun
 make collect CONFIG=<path> RUN_ID=<id|latest> # GCS から run_id 成果物回収
 make register-model CONFIG=<path> RUN_ID=<id> # run_id のモデルを Vertex Model Registry に登録（版＋latest alias）
 make pipeline CONFIG=<path> RUN_ID=<id> [DRY=--dry-run] # Vertex Pipelines (KFP) で train→register の DAG を投入（DRY で compile のみ）
+make build-push-serving            # 推論コンテナ（infra/Dockerfile.serving）を Artifact Registry へ push
+make register-servable CONFIG=<path> RUN_ID=<id> # 実 serving image 付きでモデル登録（Batch/Endpoint 可能に）
+make batch-predict CONFIG=<path> RUN_ID=<id> SRC=gs://.../instances.jsonl [DRY=--dry-run] # Vertex Batch Prediction 投入
 make cost-record CONFIG=<path> RUN_ID=<id>  # 完了ジョブの概算コストを BigQuery に記録
 make cost                          # 当月の概算コスト累計を表示（¥1000/¥5000 しきい値）
 make cost-notify                   # 当月概算サマリを Discord へ送信（webhook は conf/secret.yaml）

@@ -1,0 +1,21 @@
+# Vertex AI 推論コンテナ（LightGBM seed-bag predictor）。
+# Batch Prediction / Endpoint 用。学習イメージとは分け、推論に必要な依存だけ入れる。
+FROM python:3.12-slim
+
+# libgomp1: LightGBM が要求する OpenMP runtime（slim には無い）
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
+WORKDIR /app
+# 推論に必要な最小依存のみ（serving cold-start を軽くする）
+RUN uv pip install --system --no-cache 'lightgbm>=4.3' 'numpy>=1.26' 'google-cloud-storage>=2.18'
+
+COPY src/serving ./serving
+ENV PYTHONPATH=/app
+ENV AIP_HTTP_PORT=8080
+EXPOSE 8080
+
+ENTRYPOINT ["python", "-m", "serving.predictor"]

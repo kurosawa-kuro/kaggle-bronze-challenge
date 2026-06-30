@@ -32,10 +32,18 @@ def register_from_run(
     image_uri: str | None = None,
     artifact_uri: str | None = None,
     aliases: list[str] | None = None,
+    serving_image: str | None = None,
+    predict_route: str = "/predict",
+    health_route: str = "/health",
+    serving_port: int = 8080,
     dry_run: bool = False,
 ) -> str | dict:
     """run_id のモデルを Vertex Model Registry に 1 バージョン登録する。
-    既存 display_name があれば parent にして版を積む。dry_run 時は plan dict を返す。"""
+    既存 display_name があれば parent にして版を積む。dry_run 時は plan dict を返す。
+
+    serving_image 未指定: 学習イメージをプレースホルダ（registry の版管理/lineage 目的のみ）。
+    serving_image 指定（infra/Dockerfile.serving を push したもの）: predict/health route と
+    port を付け、Batch Prediction / Endpoint で実推論できるモデルとして登録する。"""
     project_cfg = _load_yaml(Path(project_config))
     train_cfg = _load_yaml(Path(config_path))
     data_cfg = train_cfg.get("data", train_cfg)
@@ -66,16 +74,28 @@ def register_from_run(
     }
     version_description = f"run_id={run_id}" + (f" cv_score={cv_score}" if cv_score is not None else "")
 
+    serving_uri = serving_image or image_uri
+    serving_kwargs: dict = {"serving_container_image_uri": serving_uri}
+    if serving_image:
+        serving_kwargs.update(
+            serving_container_predict_route=predict_route,
+            serving_container_health_route=health_route,
+            serving_container_ports=[serving_port],
+        )
+        serving_note = f"servable: {serving_uri} (predict={predict_route} health={health_route} port={serving_port})"
+    else:
+        serving_note = "serving 未配線（学習イメージをプレースホルダ）。registry は版管理/lineage 目的（ADR 0002）"
+
     plan = {
         "project": project,
         "region": region,
         "display_name": display_name,
         "artifact_uri": artifact_uri,
-        "serving_container_image_uri": image_uri,
         "version_aliases": aliases,
         "version_description": version_description,
         "labels": labels,
-        "note": "serving 未配線。registry は版管理/lineage 目的（ADR 0002）",
+        "note": serving_note,
+        **serving_kwargs,
     }
     if dry_run:
         print(json.dumps(plan, indent=2, ensure_ascii=False))
@@ -88,12 +108,12 @@ def register_from_run(
     model = aiplatform.Model.upload(
         display_name=display_name,
         artifact_uri=artifact_uri,
-        serving_container_image_uri=image_uri,
         version_aliases=aliases,
         version_description=version_description,
         labels=labels,
         parent_model=parent,        # None なら新規モデル、あれば新バージョン
         is_default_version=True,
+        **serving_kwargs,
     )
     kind = "new version of" if parent else "new model"
     print(f"[register] {kind} {model.resource_name}  version={model.version_id}  aliases={aliases}")
@@ -171,6 +191,11 @@ def main(argv: list[str] | None = None) -> int:
                         help="既定: gs://<bucket>/runs/<comp>/<run_id>/model")
     parser.add_argument("--alias", action="append", default=None,
                         help="version alias（複数可）。既定 latest")
+    parser.add_argument("--serving-image", default=None,
+                        help="実推論コンテナの URI（infra/Dockerfile.serving）。指定すると Batch/Endpoint で推論可能に登録")
+    parser.add_argument("--predict-route", default="/predict")
+    parser.add_argument("--health-route", default="/health")
+    parser.add_argument("--serving-port", type=int, default=8080)
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args(argv)
 
@@ -184,6 +209,10 @@ def main(argv: list[str] | None = None) -> int:
         image_uri=args.image_uri,
         artifact_uri=args.artifact_uri,
         aliases=args.alias,
+        serving_image=args.serving_image,
+        predict_route=args.predict_route,
+        health_route=args.health_route,
+        serving_port=args.serving_port,
         dry_run=args.dry_run,
     )
     return 0

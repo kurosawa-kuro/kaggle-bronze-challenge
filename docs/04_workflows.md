@@ -158,6 +158,27 @@ make pipeline CONFIG=configs/lgbm_baseline.yaml RUN_ID=pipe01
 - config は base64 でパイプラインパラメータとして渡す（イメージ非依存）。
 - ingest/featurize/train/score の細分化はしない（train.py 内で完結。GCS 往復を避ける）。
 
+## バッチ推論（Vertex Batch Prediction）
+
+推論コンテナ（`infra/Dockerfile.serving` = `src/serving/predictor.py`、LightGBM seed-bag 平均）で
+登録したモデルにバッチ推論する。
+
+```bash
+# 1) 推論イメージを push
+make build-push-serving
+
+# 2) 実 serving 付きでモデル登録（version を積み、Batch/Endpoint 可能に）
+make register-servable CONFIG=configs/lgbm_baseline.yaml RUN_ID=exp001_lgbm
+
+# 3) Batch Prediction 投入（instances.jsonl は feature 順の配列を 1 行 1 instance で）
+make batch-predict CONFIG=configs/lgbm_baseline.yaml RUN_ID=bp01 \
+  SRC=gs://<bucket>/batch_input/instances.jsonl DRY=--dry-run   # まず dry-run
+```
+
+- 推論器（`/health` `/predict`）はローカル Docker で実証済み。`make register-servable` 無しの
+  プレースホルダ登録モデルは Batch には使えない。
+- Endpoint（オンライン）は未配線。推論コンテナは Batch と共用できる（ADR 0002 で「邪魔なら削る」側）。
+
 ## コスト確認
 
 ```bash

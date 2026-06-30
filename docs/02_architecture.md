@@ -13,6 +13,7 @@ configs/
   lgbm_deep.yaml
 infra/
   Dockerfile              # Vertex 用学習 image
+  Dockerfile.serving      # Vertex 推論コンテナ（Batch Prediction / Endpoint 用）
 scripts/
   init_competition.py
 src/
@@ -25,11 +26,14 @@ src/
     collect.py            # GCS run_id 成果物を local に回収
     register.py           # run_id のモデルを Vertex Model Registry に登録
     pipeline.py           # Vertex Pipelines (KFP): train -> register の DAG
+    batch_predict.py      # Vertex Batch Prediction 投入
     submit.py             # run_id の submission.csv を Kaggle 提出
     sweep.py              # 複数 config を Custom Job に fan-out
     tune.py               # Optuna tuning
     hp_tune.py            # Vertex Hyperparameter Tuning submitter
     costs.py              # Vertex job 概算コストを BigQuery に記録
+  serving/
+    predictor.py          # Vertex 推論コンテナ本体（LightGBM seed-bag, stdlib HTTP）
   pipelines/
     ingest.py             # load_data() + encode()
     featurize.py          # make_features()
@@ -124,6 +128,8 @@ models.lgbm.train_cv()
 | `src/runner/costs.py` | Vertex Custom Job の start/end と machine type から概算コストを BigQuery に記録 |
 | `src/runner/register.py` | `gs://<bucket>/runs/<comp>/<run_id>/model` を Vertex Model Registry に登録。`kaggle-<comp>` に版を積む（`latest` alias）。serving 未配線 |
 | `src/runner/pipeline.py` | Vertex Pipelines (KFP v2)。既存イメージを container component にして `train` → `register` の DAG を compile + 投入。`--dry-run` で compile のみ |
+| `src/runner/batch_predict.py` | 登録モデル（`--serving-image` 付き）に対し Vertex Batch Prediction を投入。`--dry-run` で plan のみ |
+| `src/serving/predictor.py` | 推論コンテナ本体。`model/`(booster+manifest) を読み全 booster 平均を返す。stdlib HTTP で `/health` `/predict` を提供（新 infra lib なし） |
 | `src/utils/logger.py` | CV 結果を BigQuery `<bqDataset>.experiments` に記録。失敗しても学習は止めない |
 | `src/utils/artifact_store.py` | GCS prefix と local directory の 1:1 upload/download |
 | `src/utils/bq.py` | `bq` CLI 経由の最小 BigQuery helper |
@@ -172,10 +178,11 @@ Vertex 実行時は `gs://<bucket>/runs/<competition>/<run_id>/` に同じ内容
 - Vertex Hyperparameter Tuning: Vizier HPO
 - Vertex Model Registry: run モデルの版管理 / lineage（`make register-model`。serving は未配線）
 - Vertex Pipelines (KFP): `train` → `register` の DAG（`make pipeline`。compile 検証済み、実 run は image 再 push が前提）
+- Vertex Batch Prediction: 推論コンテナ（`infra/Dockerfile.serving`）で登録したモデルにバッチ推論（`make batch-predict`。推論器はローカル Docker 実証済み、実 job は serving image push が前提）
 - BigQuery: experiments / cost_estimates
 - Cloud Billing Budget: 実請求ガードレール
 
-Endpoint / Monitoring / Batch Prediction は ADR 0002 の採用方向には含まれるが、現コードの実装対象ではない（Model Registry / Pipelines は実装済み。Batch/Endpoint は実推論コンテナが必要なため未着手）。
+Endpoint（オンライン推論）/ Monitoring は ADR 0002 の採用方向には含まれるが、現コードの実装対象ではない（Custom Job / HP Tuning / Model Registry / Pipelines / Batch Prediction は実装済み。Endpoint は常駐コストのため未着手＝「邪魔なら削る」側。推論コンテナ自体は Batch と共用できる）。
 
 ## 境界・注意
 

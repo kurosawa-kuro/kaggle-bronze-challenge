@@ -1,4 +1,4 @@
-.PHONY: setup run nb logs clean init download submit smoke train-local train-vertex collect register-model pipeline build-push gcp-bootstrap submit-legacy stage-data cost cost-record cost-notify sweep tune hp-tune
+.PHONY: setup run nb logs clean init download submit smoke train-local train-vertex collect register-model register-servable pipeline build-push build-push-serving batch-predict gcp-bootstrap submit-legacy stage-data cost cost-record cost-notify sweep tune hp-tune
 
 VENV   := .venv
 PYTHON := $(VENV)/bin/python
@@ -18,6 +18,7 @@ IMAGE_TAG ?= $(shell $(PYTHON) -c 'import yaml; print((yaml.safe_load(open("$(PR
 GCS_BUCKET ?= $(shell $(PYTHON) -c 'import yaml; print((yaml.safe_load(open("$(PROJECT_CONFIG)")) or {}).get("gcsBucket") or "")' 2>/dev/null)
 COMP_DATA ?= $(shell $(PYTHON) -c 'import yaml; c=yaml.safe_load(open("conf/config.yaml")) or {}; print(c.get("comp") or c.get("data", {}).get("comp") or "")' 2>/dev/null)
 IMAGE ?= $(REGION)-docker.pkg.dev/$(GCP_PROJECT)/$(AR_REPO)/$(IMAGE_NAME):$(IMAGE_TAG)
+SERVING_IMAGE ?= $(REGION)-docker.pkg.dev/$(GCP_PROJECT)/$(AR_REPO)/$(IMAGE_NAME)-serving:$(IMAGE_TAG)
 # overnight バッチ既定で Spot（約1/3以下）。on-demand にするには: make train-vertex SPOT=
 SPOT ?= --spot
 
@@ -81,9 +82,22 @@ collect:
 register-model:
 	$(PYRUN) runner.register --config $(CONFIG) --run-id $(RUN_ID)
 
+# Register WITH the real serving container so the model is batch/online predictable
+register-servable:
+	$(PYRUN) runner.register --config $(CONFIG) --run-id $(RUN_ID) --serving-image $(SERVING_IMAGE)
+
 # Submit a Vertex AI Pipeline (KFP): train -> register. DRY=--dry-run for compile-only.
 pipeline:
 	$(PYRUN) runner.pipeline --config $(CONFIG) --run-id $(RUN_ID) $(DRY)
+
+# Build + push the serving image (infra/Dockerfile.serving) to Artifact Registry
+build-push-serving:
+	gcloud auth configure-docker $(REGION)-docker.pkg.dev --quiet
+	docker buildx build --platform linux/amd64 -f infra/Dockerfile.serving -t $(SERVING_IMAGE) --push .
+
+# Submit a Vertex Batch Prediction job. SRC=gs://.../instances.jsonl. DRY=--dry-run.
+batch-predict:
+	$(PYRUN) runner.batch_predict --config $(CONFIG) --run-id $(RUN_ID) --gcs-source $(SRC) $(DRY)
 
 # Record a finished Vertex job's estimated cost into BigQuery (kaggle_ops.cost_estimates)
 cost-record:
