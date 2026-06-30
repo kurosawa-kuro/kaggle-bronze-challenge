@@ -1,4 +1,4 @@
-.PHONY: setup run nb logs clean init download submit smoke train-local train-vertex collect build-push gcp-bootstrap submit-legacy stage-data cost cost-record cost-notify sweep tune hp-tune
+.PHONY: setup run nb logs clean init download submit smoke train-local train-vertex collect register-model build-push gcp-bootstrap submit-legacy stage-data cost cost-record cost-notify sweep tune hp-tune
 
 VENV   := .venv
 PYTHON := $(VENV)/bin/python
@@ -76,6 +76,10 @@ sweep:
 # Collect artifacts from gs://<bucket>/runs/<competition>/<run_id>
 collect:
 	$(PYRUN) runner.collect --config $(CONFIG) --run-id $(RUN_ID)
+
+# Register a run's model into Vertex AI Model Registry (gs://<bucket>/runs/<comp>/<run_id>/model)
+register-model:
+	$(PYRUN) runner.register --config $(CONFIG) --run-id $(RUN_ID)
 
 # Record a finished Vertex job's estimated cost into BigQuery (kaggle_ops.cost_estimates)
 cost-record:

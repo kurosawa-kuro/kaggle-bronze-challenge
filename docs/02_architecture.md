@@ -23,6 +23,7 @@ src/
     train.py              # local / Vertex 共通の config 駆動学習 runner
     vertex_run.py         # Vertex Custom Job submitter
     collect.py            # GCS run_id 成果物を local に回収
+    register.py           # run_id のモデルを Vertex Model Registry に登録
     submit.py             # run_id の submission.csv を Kaggle 提出
     sweep.py              # 複数 config を Custom Job に fan-out
     tune.py               # Optuna tuning
@@ -120,6 +121,7 @@ models.lgbm.train_cv()
 | `src/runner/tune.py` | Optuna による単一マシン HPO。`best_params.json`, `best_config.yaml`, `trials.csv` を生成 |
 | `src/runner/hp_tune.py` | Vertex Hyperparameter Tuning（Vizier）を投入 |
 | `src/runner/costs.py` | Vertex Custom Job の start/end と machine type から概算コストを BigQuery に記録 |
+| `src/runner/register.py` | `gs://<bucket>/runs/<comp>/<run_id>/model` を Vertex Model Registry に登録。`kaggle-<comp>` に版を積む（`latest` alias）。serving 未配線 |
 | `src/utils/logger.py` | CV 結果を BigQuery `<bqDataset>.experiments` に記録。失敗しても学習は止めない |
 | `src/utils/artifact_store.py` | GCS prefix と local directory の 1:1 upload/download |
 | `src/utils/bq.py` | `bq` CLI 経由の最小 BigQuery helper |
@@ -137,9 +139,12 @@ outputs/runs/<competition>/<run_id>/
   feature_importance.csv
   submission.csv
   log.txt
+  model/
+    booster_NNN.txt       # seed×fold の全 booster
+    manifest.json         # boosters 一覧・推論方法・objective/num_class/feature_names
 ```
 
-Vertex 実行時は `gs://<bucket>/runs/<competition>/<run_id>/` に同じ内容を upload し、`make collect RUN_ID=<id>` で local に回収する。
+Vertex 実行時は `gs://<bucket>/runs/<competition>/<run_id>/` に同じ内容を upload し、`make collect RUN_ID=<id>` で local に回収する。`model/` は `make register-model RUN_ID=<id>` が Vertex Model Registry へ登録する成果物。
 
 ## config 配送
 
@@ -163,10 +168,11 @@ Vertex 実行時は `gs://<bucket>/runs/<competition>/<run_id>/` に同じ内容
 - Artifact Registry: 学習 image
 - Vertex Custom Job: full training / sweep jobs
 - Vertex Hyperparameter Tuning: Vizier HPO
+- Vertex Model Registry: run モデルの版管理 / lineage（`make register-model`。serving は未配線）
 - BigQuery: experiments / cost_estimates
 - Cloud Billing Budget: 実請求ガードレール
 
-Model Registry / Pipelines / Endpoint / Monitoring は ADR 0002 の採用方向には含まれるが、現コードの実装対象ではない。
+Pipelines / Endpoint / Monitoring は ADR 0002 の採用方向には含まれるが、現コードの実装対象ではない（Model Registry は実装済み）。
 
 ## 境界・注意
 

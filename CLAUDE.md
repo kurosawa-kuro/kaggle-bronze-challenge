@@ -28,6 +28,7 @@ make sweep CONFIGS="a.yaml b.yaml" TAG=exp01  # 複数 config を並列 Custom J
 make tune CONFIG=<path> RUN_ID=<id> N_TRIALS=30  # Optuna 探索（1マシン）→ best_params.json/best_config.yaml
 make hp-tune CONFIG=<path> RUN_ID=<id> MAX_TRIALS=20 PARALLEL=4  # Vertex HP Tuning（Vizier 並列探索）
 make collect CONFIG=<path> RUN_ID=<id|latest> # GCS から run_id 成果物回収
+make register-model CONFIG=<path> RUN_ID=<id> # run_id のモデルを Vertex Model Registry に登録（版＋latest alias）
 make cost-record CONFIG=<path> RUN_ID=<id>  # 完了ジョブの概算コストを BigQuery に記録
 make cost                          # 当月の概算コスト累計を表示（¥1000/¥5000 しきい値）
 make cost-notify                   # 当月概算サマリを Discord へ送信（webhook は conf/secret.yaml）

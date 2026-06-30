@@ -115,7 +115,11 @@ outputs/runs/<competition>/<run_id>/
   feature_importance.csv
   submission.csv
   log.txt
+  model/booster_NNN.txt   # seed×fold の全 booster
+  model/manifest.json     # boosters 一覧・推論方法・objective/num_class/feature_names
 ```
+
+`model/` は `make register-model RUN_ID=<id>` が Vertex Model Registry（`kaggle-<comp>` に版を積む）へ登録する成果物。
 
 Vertex 実行時:
 

@@ -234,6 +234,17 @@ def _train_lgbm(*, cfg: dict[str, Any], config_path: Path, run_dir: Path, run_id
     _write_predictions(run_dir / "test_pred.parquet", preds)
     _write_feature_importance(run_dir / "feature_importance.csv", all_models, X_train.columns)
     make_submission(X_test, all_models, out_path=run_dir / "submission.csv", original_test=test_df)
+    _write_models(run_dir / "model", all_models, meta={
+        "objective": cfg.get("data", cfg).get("objective"),
+        "num_class": int(oof.shape[1]) if oof.ndim > 1 else 1,
+        "metric": cfg.get("data", cfg)["metric"],
+        "competition": cfg.get("data", cfg)["comp"],
+        "run_id": run_id,
+        "seeds": seeds,
+        "n_folds_trained": int(max_folds or n_folds),
+        "feature_names": list(map(str, X_train.columns)),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    })
     return float(metrics["cv_score"])
 
 
@@ -305,6 +316,32 @@ def _write_predictions(path: Path, preds: np.ndarray) -> None:
         df = pd.DataFrame(preds, columns=[f"pred_{i}" for i in range(preds.shape[1])])
         df.insert(0, "row_id", range(len(preds)))
     df.to_parquet(path, index=False)
+
+
+def _write_models(model_dir: Path, models: list[Any], *, meta: dict[str, Any]) -> None:
+    """学習済み booster を保存（Vertex Model Registry 登録 = runner.register の成果物）。
+
+    seed×fold の全 booster を保存し、推論は全 booster の平均（pipelines.score.predict と同じ）。
+    `manifest.json` が boosters の一覧と推論方法・メタを持つ。
+    """
+    model_dir.mkdir(parents=True, exist_ok=True)
+    saved: list[str] = []
+    for i, model in enumerate(models):
+        if hasattr(model, "save_model"):
+            fname = f"booster_{i:03d}.txt"
+            model.save_model(str(model_dir / fname))
+            saved.append(fname)
+    manifest = {
+        "model_type": "lightgbm-seedbag",
+        "framework": "lightgbm",
+        "n_boosters": len(saved),
+        "boosters": saved,
+        "predict": "mean over boosters (proba for classification)",
+        **meta,
+    }
+    (model_dir / "manifest.json").write_text(
+        json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
+    print(f"[train] saved {len(saved)} boosters -> {model_dir}")
 
 
 def _write_feature_importance(path: Path, models: list[Any], feature_names: pd.Index) -> None:
