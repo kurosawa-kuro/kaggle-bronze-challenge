@@ -21,7 +21,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Submit a Vertex Hyperparameter Tuning job")
     parser.add_argument("--config", default="configs/lgbm_baseline.yaml")
     parser.add_argument("--run-id", required=True)
-    parser.add_argument("--project-config", default="conf/project.yaml")
+    parser.add_argument("--project-config", default="env/project.yaml")
     parser.add_argument("--image-uri", default=None)
     parser.add_argument("--max-trials", type=int, default=20)
     parser.add_argument("--parallel-trials", type=int, default=4)

@@ -18,7 +18,7 @@
 | カテゴリ列 | `spectral_type`（M, K など）、`galaxy_population`（Red_Sequence など） |
 | 参加チーム数 | 1,836（2026-06-17 時点） |
 
-## conf/config.yaml 設定
+## env/config.yaml 設定
 
 ```yaml
 comp: playground-series-s6e6

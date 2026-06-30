@@ -13,7 +13,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--competition", "--comp", dest="competition", default=None)
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--bucket", default=None)
-    parser.add_argument("--project-config", default="conf/project.yaml")
+    parser.add_argument("--project-config", default="env/project.yaml")
     parser.add_argument("--output-root", default="outputs/runs")
     return parser.parse_args(argv)
 
@@ -27,7 +27,7 @@ def main(argv: list[str] | None = None) -> int:
     if not competition:
         raise SystemExit("[collect] competition is required")
     if not bucket:
-        raise SystemExit("[collect] bucket is required via --bucket or conf/project.yaml:gcsBucket")
+        raise SystemExit("[collect] bucket is required via --bucket or env/project.yaml:gcsBucket")
 
     from utils.artifact_store import GcsPrefix, download_directory, latest_run_id
 

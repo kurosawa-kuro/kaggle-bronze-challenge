@@ -17,7 +17,7 @@
 | 欠損の多い列 |  |
 | カテゴリ列 |  |
 
-## conf/config.yaml 設定
+## env/config.yaml 設定
 
 ```yaml
 target: ""

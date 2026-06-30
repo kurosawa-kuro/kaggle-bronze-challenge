@@ -11,7 +11,7 @@ WORKDIR /app
 COPY requirements.txt ./
 RUN uv pip install --system --no-cache -r requirements.txt
 
-COPY conf ./conf
+COPY env ./env
 COPY configs ./configs
 COPY src ./src
 

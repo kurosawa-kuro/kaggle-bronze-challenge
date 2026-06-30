@@ -18,7 +18,7 @@ def clean_env() -> dict:
     return {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}
 
 
-def load_gcp(path: str | Path = "conf/project.yaml") -> tuple[str | None, str]:
+def load_gcp(path: str | Path = "env/project.yaml") -> tuple[str | None, str]:
     """(gcpProject, bqDataset) を返す。project 未設定なら (None, dataset)。"""
     p = Path(path)
     cfg = yaml.safe_load(p.read_text(encoding="utf-8")) if p.exists() else {}

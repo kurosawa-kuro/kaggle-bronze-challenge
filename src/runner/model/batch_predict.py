@@ -21,7 +21,7 @@ def submit_batch(
     *,
     config_path: str,
     run_id: str | None = None,
-    project_config: str = "conf/project.yaml",
+    project_config: str = "env/project.yaml",
     project: str | None = None,
     region: str | None = None,
     bucket: str | None = None,
@@ -110,7 +110,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Submit a Vertex Batch Prediction job")
     parser.add_argument("--config", default="configs/lgbm_baseline.yaml")
     parser.add_argument("--run-id", default=None, help="出力先・ジョブ名のタグ。未指定なら時刻")
-    parser.add_argument("--project-config", default="conf/project.yaml")
+    parser.add_argument("--project-config", default="env/project.yaml")
     parser.add_argument("--project", default=None)
     parser.add_argument("--region", default=None)
     parser.add_argument("--bucket", default=None)

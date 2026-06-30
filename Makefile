@@ -9,14 +9,14 @@ UV     := uv
 PYRUN  := PYTHONPATH=src $(PYTHON) -m
 CONFIG ?= configs/lgbm_baseline.yaml
 RUN_ID ?= $(shell date -u +%Y%m%d_%H%M%S)
-PROJECT_CONFIG ?= conf/project.yaml
+PROJECT_CONFIG ?= env/project.yaml
 GCP_PROJECT ?= $(shell $(PYTHON) -c 'import yaml; c=yaml.safe_load(open("$(PROJECT_CONFIG)")) or {}; print(c.get("gcpProject") or c.get("gcp", {}).get("project") or "")' 2>/dev/null)
 REGION ?= $(shell $(PYTHON) -c 'import yaml; c=yaml.safe_load(open("$(PROJECT_CONFIG)")) or {}; print(c.get("gcpRegion") or c.get("gcp", {}).get("region") or "us-central1")' 2>/dev/null)
 AR_REPO ?= $(shell $(PYTHON) -c 'import yaml; print((yaml.safe_load(open("$(PROJECT_CONFIG)")) or {}).get("artifactRegistryRepo") or "kaggle")' 2>/dev/null)
 IMAGE_NAME ?= $(shell $(PYTHON) -c 'import yaml; print((yaml.safe_load(open("$(PROJECT_CONFIG)")) or {}).get("imageName") or "kaggle-bronze-challenge")' 2>/dev/null)
 IMAGE_TAG ?= $(shell $(PYTHON) -c 'import yaml; print((yaml.safe_load(open("$(PROJECT_CONFIG)")) or {}).get("imageTag") or "latest")' 2>/dev/null)
 GCS_BUCKET ?= $(shell $(PYTHON) -c 'import yaml; print((yaml.safe_load(open("$(PROJECT_CONFIG)")) or {}).get("gcsBucket") or "")' 2>/dev/null)
-COMP_DATA ?= $(shell $(PYTHON) -c 'import yaml; c=yaml.safe_load(open("conf/config.yaml")) or {}; print(c.get("comp") or c.get("data", {}).get("comp") or "")' 2>/dev/null)
+COMP_DATA ?= $(shell $(PYTHON) -c 'import yaml; c=yaml.safe_load(open("env/config.yaml")) or {}; print(c.get("comp") or c.get("data", {}).get("comp") or "")' 2>/dev/null)
 IMAGE ?= $(REGION)-docker.pkg.dev/$(GCP_PROJECT)/$(AR_REPO)/$(IMAGE_NAME):$(IMAGE_TAG)
 SERVING_IMAGE ?= $(REGION)-docker.pkg.dev/$(GCP_PROJECT)/$(AR_REPO)/$(IMAGE_NAME)-serving:$(IMAGE_TAG)
 # overnight バッチ既定で Spot（約1/3以下）。on-demand にするには: make train-vertex SPOT=
@@ -115,7 +115,7 @@ cost-record:
 cost:
 	$(PYRUN) runner.ops.costs report --config $(CONFIG)
 
-# Push the month-to-date cost summary to Discord (webhook in conf/secret.yaml)
+# Push the month-to-date cost summary to Discord (webhook in env/secret.yaml)
 cost-notify:
 	$(PYRUN) runner.ops.costs notify --config $(CONFIG)
 

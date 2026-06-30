@@ -44,7 +44,7 @@
 - [x] `run_id` 採番規則（timestamp 不可の制約あり → Makefile 側 `RUN_ID` で渡す。未指定時のみ UTC timestamp）
 - [x] SQLite ログと run_id 成果物の責務分担（SQLite=横断インデックス、`outputs/runs/...`=正本実体）
 - [x] GCP 認証: ローカル投入=ADC（`gcloud auth application-default login`）、コンテナ内=アタッチ SA + `google.auth.default()`。**Doppler は Kaggle token 専用のまま**
-- [x] GCS バケット名・リージョン・Artifact Registry リポジトリ名の決定（`conf/project.yaml` に project 設定として置く）
+- [x] GCS バケット名・リージョン・Artifact Registry リポジトリ名の決定（`env/project.yaml` に project 設定として置く）
 - [x] **`vertex_run.py`（Custom Job 投入）は流用元が無い → 新規実装**
 
 実装順:

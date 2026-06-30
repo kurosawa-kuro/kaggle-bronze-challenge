@@ -107,13 +107,13 @@ def _webhook_url() -> str | None:
     env = os.environ.get("DISCORD_WEBHOOK_URL")
     if env:
         return env
-    return _load_yaml(Path("conf/secret.yaml")).get("discordWebhookUrl")
+    return _load_yaml(Path("env/secret.yaml")).get("discordWebhookUrl")
 
 
 def _discord_post(message: str) -> bool:
     url = _webhook_url()
     if not url:
-        print("[cost] Discord webhook 未設定（conf/secret.yaml discordWebhookUrl / env DISCORD_WEBHOOK_URL）")
+        print("[cost] Discord webhook 未設定（env/secret.yaml discordWebhookUrl / env DISCORD_WEBHOOK_URL）")
         return False
     req = urllib.request.Request(
         url, data=json.dumps({"content": message}).encode("utf-8"),
@@ -174,7 +174,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="GCP cost-estimate logger (BigQuery)")
     parser.add_argument("command", choices=["record", "report", "notify"])
     parser.add_argument("--config", default="configs/lgbm_baseline.yaml")
-    parser.add_argument("--project-config", default="conf/project.yaml")
+    parser.add_argument("--project-config", default="env/project.yaml")
     parser.add_argument("--run-id", default=None)
     args = parser.parse_args(argv)
 
@@ -184,7 +184,7 @@ def main(argv: list[str] | None = None) -> int:
     region = pcfg.get("gcpRegion") or gcp.get("region", "us-central1")
     jpy = float(pcfg.get("jpyPerUsd", 150))
     if not project:
-        raise SystemExit("[cost] gcpProject が conf/project.yaml に無い")
+        raise SystemExit("[cost] gcpProject が env/project.yaml に無い")
 
     if args.command == "report":
         report(project=project)

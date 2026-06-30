@@ -4,7 +4,7 @@
 
 ```
 Makefile
-conf/
+env/
   config.yaml             # 旧 run 経路 / default config
   project.yaml            # repo path + GCP project / bucket / image / BQ / cost 設定
   secret.yaml             # gitignore。Kaggle token / Discord webhook 等

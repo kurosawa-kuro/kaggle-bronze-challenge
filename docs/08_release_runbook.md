@@ -45,8 +45,8 @@ make submit-legacy COMP=<competition-name> MSG="exp001: lgbm baseline  CV=0.4449
 # 1コマンドで download → ファイル正規化 → config.yaml 下書き表示 → doc 生成
 make init COMP=<competition-slug>
 
-# 2. 表示された下書きで conf/config.yaml を更新
-vim conf/config.yaml
+# 2. 表示された下書きで env/config.yaml を更新
+vim env/config.yaml
 
 # 3. 古いキャッシュを削除して動作確認
 rm -rf data/interim/ data/features/ && make run

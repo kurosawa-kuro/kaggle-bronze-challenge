@@ -4,12 +4,12 @@
 
 | ファイル | 内容 |
 |---|---|
-| `conf/config.yaml` | 旧 `make run` と default config 用の flat schema |
+| `env/config.yaml` | 旧 `make run` と default config 用の flat schema |
 | `configs/*.yaml` | `runner.experiment.train` 用の実験 config |
-| `conf/project.yaml` | repo path、GCP project / region / bucket / image、BQ dataset、コスト設定 |
-| `conf/secret.yaml` | gitignore。Kaggle token / Discord webhook 等 |
+| `env/project.yaml` | repo path、GCP project / region / bucket / image、BQ dataset、コスト設定 |
+| `env/secret.yaml` | gitignore。Kaggle token / Discord webhook 等 |
 
-## `conf/config.yaml`
+## `env/config.yaml`
 
 flat schema:
 
@@ -65,7 +65,7 @@ runtime:
 - `experiments_db` が残っている config は旧互換の名残で、現行 logger は BigQuery を使う。
 - `model.name` は現状 `lgbm` のみ runner 対応。
 
-## `conf/project.yaml`
+## `env/project.yaml`
 
 主要キー:
 
@@ -149,7 +149,7 @@ gs://<bucket>/runs/<competition>/<run_id>/
 
 ## BigQuery: experiments
 
-Dataset は `conf/project.yaml` の `bqDataset`（既定 `kaggle_ops`）。  
+Dataset は `env/project.yaml` の `bqDataset`（既定 `kaggle_ops`）。  
 `src/utils/logger.py` が `CREATE TABLE IF NOT EXISTS` を実行する。ただし dataset 自体は事前に存在している必要がある。
 
 ```sql
@@ -211,7 +211,7 @@ Git 管理しない:
 - `outputs/`
 - `submission.csv`
 - `*.db`, `*.sqlite*`
-- `conf/secret.yaml`
+- `env/secret.yaml`
 - `.venv/`
 
 Git 管理する:
@@ -220,4 +220,4 @@ Git 管理する:
 - `docs/`
 - `src/`
 - `infra/Dockerfile`
-- `conf/project.yaml`
+- `env/project.yaml`

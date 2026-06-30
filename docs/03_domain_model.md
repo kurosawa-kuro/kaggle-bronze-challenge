@@ -6,7 +6,7 @@
 |---|---|
 | Competition | Kaggle コンペ。path / GCS prefix / run_id 成果物の単位 |
 | Config | `configs/*.yaml` の実験設定。data / model / cv / seeds / runtime を持つ |
-| Target | 目的変数。`data.target` または `conf/config.yaml` の `target` |
+| Target | 目的変数。`data.target` または `env/config.yaml` の `target` |
 | Fold | CV の分割単位。regression は KFold、それ以外は StratifiedKFold |
 | Seed | CV 分割とモデル乱数の種。full run では `seeds` による seed 平均を行う |
 | OOF | Out-of-Fold 予測。CV score と分析に使う |
@@ -29,7 +29,7 @@
 make init COMP=<slug>
   │
   ▼
-conf/config.yaml / configs/*.yaml を調整
+env/config.yaml / configs/*.yaml を調整
   │
   ▼
 make smoke

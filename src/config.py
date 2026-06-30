@@ -1,10 +1,10 @@
-"""コンペ切り替え時は conf/config.yaml の comp と4項目だけ変更する。"""
+"""コンペ切り替え時は env/config.yaml の comp と4項目だけ変更する。"""
 import os
 from pathlib import Path
 import yaml
 
 _ROOT = Path(__file__).parent.parent
-_cfg_path = Path(os.environ.get("KBC_CONFIG_PATH", _ROOT / "conf" / "config.yaml"))
+_cfg_path = Path(os.environ.get("KBC_CONFIG_PATH", _ROOT / "env" / "config.yaml"))
 _cfg = yaml.safe_load(_cfg_path.read_text()) or {}
 
 _data = _cfg.get("data", {})

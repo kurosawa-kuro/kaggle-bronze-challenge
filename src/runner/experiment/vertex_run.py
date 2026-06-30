@@ -12,7 +12,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Submit a Vertex AI Custom Job")
     parser.add_argument("--config", default="configs/lgbm_baseline.yaml")
     parser.add_argument("--run-id", required=True)
-    parser.add_argument("--project-config", default="conf/project.yaml")
+    parser.add_argument("--project-config", default="env/project.yaml")
     parser.add_argument("--project", default=None)
     parser.add_argument("--region", default=None)
     parser.add_argument("--bucket", default=None)
@@ -32,7 +32,7 @@ def submit_from_config(
     *,
     config_path: str,
     run_id: str,
-    project_config: str = "conf/project.yaml",
+    project_config: str = "env/project.yaml",
     project: str | None = None,
     region: str | None = None,
     bucket: str | None = None,

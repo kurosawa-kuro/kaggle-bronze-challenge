@@ -13,8 +13,8 @@ make smoke CONFIG=configs/lgbm_baseline.yaml RUN_ID=smoke_check
 
 ```bash
 make init COMP=<competition-slug>
-vim conf/config.yaml
-cp conf/config.yaml configs/<competition>_lgbm_baseline.yaml  # 必要に応じて nested schema に整える
+vim env/config.yaml
+cp env/config.yaml configs/<competition>_lgbm_baseline.yaml  # 必要に応じて nested schema に整える
 rm -rf data/<competition>/interim data/<competition>/features
 make smoke CONFIG=configs/<competition>_lgbm_baseline.yaml RUN_ID=smoke01
 ```
@@ -202,7 +202,7 @@ make cost-notify
 
 - `cost-record` は完了済み Vertex Custom Job の start/end から概算 JPY を算出し、BigQuery `kaggle_ops.cost_estimates` に記録する。
 - `cost` は当月概算を ¥1000 watch / ¥5000 相談ラインと並べて表示する。
-- Discord webhook は `conf/secret.yaml` の `discordWebhookUrl` または `DISCORD_WEBHOOK_URL`。
+- Discord webhook は `env/secret.yaml` の `discordWebhookUrl` または `DISCORD_WEBHOOK_URL`。
 
 ## 提出
 

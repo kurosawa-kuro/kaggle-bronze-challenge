@@ -20,7 +20,7 @@ import yaml
 def deploy(
     *,
     config_path: str,
-    project_config: str = "conf/project.yaml",
+    project_config: str = "env/project.yaml",
     project: str | None = None,
     region: str | None = None,
     model: str | None = None,
@@ -69,7 +69,7 @@ def deploy(
 def teardown(
     *,
     config_path: str,
-    project_config: str = "conf/project.yaml",
+    project_config: str = "env/project.yaml",
     project: str | None = None,
     region: str | None = None,
     dry_run: bool = False,
@@ -127,7 +127,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Deploy / teardown a Vertex Endpoint（⚠️常駐コスト）")
     parser.add_argument("command", choices=["deploy", "teardown"])
     parser.add_argument("--config", default="configs/lgbm_baseline.yaml")
-    parser.add_argument("--project-config", default="conf/project.yaml")
+    parser.add_argument("--project-config", default="env/project.yaml")
     parser.add_argument("--project", default=None)
     parser.add_argument("--region", default=None)
     parser.add_argument("--model", default=None, help="display_name か model resource。既定 kaggle-<comp>")
