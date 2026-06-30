@@ -17,7 +17,13 @@ BEST_PARAMS = {
     "lambda_l2": 1e-8,
 }
 
-train_df, test_df = load_data()
-X_train, y_train, X_test = make_features(train_df, test_df)
-oof, models = train_cv(X_train, y_train, params=BEST_PARAMS, notes="lgbm optuna best")
-make_submission(X_test, models, out_path="submission.csv", original_test=test_df)
+def main() -> None:
+    train_df, test_df = load_data()
+    X_train, y_train, X_test = make_features(train_df, test_df)
+    oof, models = train_cv(X_train, y_train, params=BEST_PARAMS, notes="lgbm optuna best")
+    make_submission(X_test, models, out_path="submission.csv", original_test=test_df)
+
+
+# import では実行しない（`make run` = python -m runner.run のときだけ走る）。
+if __name__ == "__main__":
+    main()
