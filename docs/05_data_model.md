@@ -1,40 +1,41 @@
 # 05 データモデル
 
-## 設定
+## 設定ファイル
 
-| ファイル | 種別 | 内容 |
-|---|---|---|
-| `conf/config.yaml` | 非機密設定 | COMP / TARGET / OBJECTIVE / METRIC / N_FOLDS / SEED |
-| `configs/*.yaml` | 実験設定 | data / model / cv / runtime を含む `train.py --config` 用設定 |
-| `conf/project.yaml` | ローカル project 設定 | repoRoot と GCP project / region / bucket / image 設定 |
-| `conf/secret.yaml` | ローカル秘密情報 | gitignore。Kaggle API トークン等 |
+| ファイル | 内容 |
+|---|---|
+| `conf/config.yaml` | 旧 `make run` と default config 用の flat schema |
+| `configs/*.yaml` | `runner.train` 用の実験 config |
+| `conf/project.yaml` | repo path、GCP project / region / bucket / image、BQ dataset、コスト設定 |
+| `conf/secret.yaml` | gitignore。Kaggle token / Discord webhook 等 |
 
-### conf/config.yaml スキーマ
+## `conf/config.yaml`
+
+flat schema:
 
 ```yaml
-comp: "titanic"                 # コンペ識別子。パスに使用: data/<comp>/raw/ など
-target: "Survived"              # 目的変数列名
-id_col: "PassengerId"           # ID 列名（なければ null）
-objective: "binary"             # regression / binary / multiclass
-metric: "auc"                   # rmse / auc / logloss / mape
-
+comp: "titanic"
+target: "Survived"
+id_col: "PassengerId"
+objective: "binary"
+metric: "auc"
 n_folds: 5
 seed: 42
 ```
 
-> 実験ログは BigQuery `<bqDataset>.experiments` に統一（ADR 0002）。旧 `experiments_db`（SQLite）設定は廃止。
+`src/config.py` は `KBC_CONFIG_PATH` が未指定ならこのファイルを読む。
 
-データパス（`data_raw` 等）は `src/config.py` が `comp` から自動導出するため config.yaml への記載不要。
+## `configs/*.yaml`
 
-### configs/*.yaml スキーマ
+nested schema:
 
 ```yaml
 data:
-  comp: "titanic"
-  target: "Survived"
-  id_col: "PassengerId"
-  objective: "binary"
-  metric: "auc"
+  comp: "playground-series-s6e6"
+  target: "class"
+  id_col: "id"
+  objective: "multiclass"
+  metric: "logloss"
 
 model:
   name: "lgbm"
@@ -46,6 +47,8 @@ cv:
   n_folds: 5
   seed: 42
 
+seeds: [42, 777, 2026]
+
 runtime:
   output_root: "outputs/runs"
   num_boost_round: 2000
@@ -55,26 +58,53 @@ runtime:
   smoke_num_boost_round: 20
 ```
 
-`src/config.py` は旧 `conf/config.yaml` の flat schema と、新しい `configs/*.yaml` の nested schema の両方を読む。`train.py` は `KBC_CONFIG_PATH` を設定してから既存 pipeline/model を import する。
+補足:
 
-## データレイヤー（Databricks Medallion）
+- `runner.train` は full run では `seeds` を横断し、OOF / test prediction / feature importance を平均する。
+- smoke では `cv.seed` 単発。
+- `experiments_db` が残っている config は旧互換の名残で、現行 logger は BigQuery を使う。
+- `model.name` は現状 `lgbm` のみ runner 対応。
 
-コンペごとに `data/<comp>/` 以下に分離して保持する。再ダウンロード不要でコンペを切り替えられる。
+## `conf/project.yaml`
 
-| レイヤー | パス | 形式 | 内容 | gitignore |
+主要キー:
+
+```yaml
+gcp:
+  project: mlops-dev-a
+  account: kurokawa81toshifumi@gmail.com
+  region: us-central1
+gcpProject: mlops-dev-a
+gcpRegion: us-central1
+artifactRegistryRepo: kaggle
+imageName: kaggle-bronze-challenge
+imageTag: latest
+imageUri:
+gcsBucket: mlops-dev-a-kaggle-bronze-runs
+bqDataset: kaggle_ops
+jpyPerUsd: 150
+vertexMachineType: n2-standard-16
+vertexServiceAccount:
+```
+
+`imageUri` が空なら `{region}-docker.pkg.dev/{project}/{repo}/{imageName}:{imageTag}` を runner が組み立てる。
+
+## データレイヤー
+
+| レイヤー | パス | 形式 | 内容 | Git |
 |---|---|---|---|---|
-| **Bronze** | `data/<comp>/raw/train.csv` | CSV | Kaggle 生データ（学習） | ✅ |
-| **Bronze** | `data/<comp>/raw/test.csv` | CSV | Kaggle 生データ（テスト） | ✅ |
-| **Silver** | `data/<comp>/interim/train.parquet` | Parquet | null 埋め・エンコード済み学習データ | ✅ |
-| **Silver** | `data/<comp>/interim/test.parquet` | Parquet | null 埋め・エンコード済みテストデータ | ✅ |
-| **Gold** | `data/<comp>/features/` | Parquet | 特徴量エンジニアリング済みデータ（将来利用） | ✅ |
-| — | BigQuery `<bqDataset>.experiments` | BQ テーブル | 実験ログ（全コンペ共通、run_id で cost_estimates と JOIN 可） | — |
-| — | `submission.csv` | CSV | Kaggle 提出ファイル | ✅ |
-| — | `outputs/runs/<comp>/<run_id>/` | mixed | run_id 成果物一式 | ✅ |
+| Bronze | `data/<comp>/raw/train.csv` | CSV | Kaggle 学習データ | ignore |
+| Bronze | `data/<comp>/raw/test.csv` | CSV | Kaggle テストデータ | ignore |
+| Silver | `data/<comp>/interim/train.parquet` | Parquet | load cache | ignore |
+| Silver | `data/<comp>/interim/test.parquet` | Parquet | load cache | ignore |
+| Gold | `data/<comp>/features/` | Parquet | 将来の特徴量 cache | ignore |
+| Vertex input | `gs://<bucket>/data/<comp>/raw/` | CSV | Vertex job が取得する raw data | GCS |
+
+`pipelines.ingest.load_data()` は `data/<comp>/interim/*.parquet` があれば優先し、なければ raw CSV、なければ California Housing fallback を使う。
 
 ## run_id 成果物
 
-local / Vertex Custom Job ともに同じレイアウトを正本とする。
+local 正本:
 
 ```
 outputs/runs/<competition>/<run_id>/
@@ -87,48 +117,103 @@ outputs/runs/<competition>/<run_id>/
   log.txt
 ```
 
-Vertex 実行時は同じ内容を `gs://<bucket>/runs/<competition>/<run_id>/` に upload し、`collect.py` がローカルの `outputs/runs/` へ 1:1 で再現する。
+Vertex 実行時:
 
-## 実験ログ（BigQuery）
+```
+gs://<bucket>/runs/<competition>/<run_id>/
+  same files
+```
 
-BigQuery `<bqDataset>.experiments`（`conf/project.yaml` の `bqDataset`、既定 `kaggle_ops`）。
-`src/utils/logger.py` が初回 `CREATE TABLE IF NOT EXISTS` で自動作成し、`log_run()` で 1 run = 1 行を記録する。
-`gcpProject` 未設定 / オフライン時は no-op（ローカル smoke を止めない）。
+`metrics.json` の代表フィールド:
+
+```json
+{
+  "run_id": "exp001_lgbm",
+  "competition": "playground-series-s6e6",
+  "model": "lgbm",
+  "metric": "logloss",
+  "cv_score": 0.08763,
+  "seeds": [42, 777, 2026],
+  "n_seeds": 3,
+  "seed_scores": [{"seed": 42, "cv_score": 0.0879}],
+  "n_folds_requested": 5,
+  "n_folds_trained": 5,
+  "smoke": false,
+  "created_at": "2026-06-30T00:00:00+00:00"
+}
+```
+
+## BigQuery: experiments
+
+Dataset は `conf/project.yaml` の `bqDataset`（既定 `kaggle_ops`）。  
+`src/utils/logger.py` が `CREATE TABLE IF NOT EXISTS` を実行する。ただし dataset 自体は事前に存在している必要がある。
 
 ```sql
 CREATE TABLE IF NOT EXISTS kaggle_ops.experiments (
-    run_id      STRING,      -- 例: 20260617_025414_lgbm_710b
-    recorded_at TIMESTAMP,   -- UTC
-    cv_score    FLOAT64,     -- 小さいほど良い (rmse) or 大きいほど良い (auc)
-    metric      STRING,      -- rmse / auc / logloss / mape
-    competition STRING,      -- comp slug
-    params      STRING,      -- JSON 形式のハイパラ
-    notes       STRING,      -- 実験メモ
-    source      STRING       -- 記録経路（例: cv）
+  run_id      STRING,
+  recorded_at TIMESTAMP,
+  cv_score    FLOAT64,
+  metric      STRING,
+  competition STRING,
+  params      STRING,
+  notes       STRING,
+  source      STRING
 );
 ```
 
-run_id でコスト概算と JOIN（「このスコアを出した実験は ¥いくら使ったか」）:
+`log_run()` は BigQuery 記録に失敗しても学習を止めない。
 
-```sql
-SELECT e.run_id, e.cv_score, ROUND(SUM(c.est_jpy), 1) AS est_jpy
-FROM kaggle_ops.experiments e
-LEFT JOIN kaggle_ops.cost_estimates c USING (run_id)
-GROUP BY e.run_id, e.cv_score
-ORDER BY e.cv_score;
--- または make logs で直近 10 件を表示
-```
+## BigQuery: cost_estimates
 
-## 前処理・エンコーディング規約（pipelines/ingest.py）
+`src/runner/costs.py` は現状 `kaggle_ops.cost_estimates` を使う。
 
-- **数値列の null**: 学習データの中央値で埋める（テストにも同じ値を使う）
-- **カテゴリ列の null**: `"__missing__"` で埋める
-- **カテゴリエンコーディング**: OrdinalEncoder（`handle_unknown="use_encoded_value"`, `unknown_value=-1`）
-- **fit は学習データのみ**: テストデータへの情報リークを防ぐ
-- 実装: `src/pipelines/ingest.encode()`
+主要カラム:
 
-## 関連タスク
+| カラム | 内容 |
+|---|---|
+| `recorded_at` | 記録時刻 |
+| `service` | `aiplatform` 等 |
+| `resource_type` | `custom_job` 等 |
+| `resource_id` | GCP resource id |
+| `detail` | machine type + spot 情報 |
+| `region` | GCP region |
+| `usage_qty` / `usage_unit` | 使用量。Vertex は hour |
+| `unit_price_usd` / `est_usd` / `est_jpy` | 概算単価・費用 |
+| `start_time` / `end_time` | job 実行時間 |
+| `labels` | purpose / run_id / comp |
+| `run_id` / `competition` | JOIN 用 |
+| `source` | `estimate` |
 
-- スキーマ変更・前処理の変更は task に目的・移行手順・検証方法を残す。
-- 新コンペへの転用時は `conf/config.yaml` を更新し `data/interim/` と `data/features/` を削除してから `make run` を実行する。
-- Vertex-ready runner では `configs/*.yaml` を増やして `make smoke` → `make train-local` → `make train-vertex` の順に確認する。
+## 前処理・エンコーディング
+
+`pipelines.ingest.encode()` の規約:
+
+- 数値列 null は学習データの中央値で埋める
+- カテゴリ列 null は `"__missing__"` で埋める
+- カテゴリ列は `OrdinalEncoder(handle_unknown="use_encoded_value", unknown_value=-1)`
+- fit は学習データのみ
+
+`pipelines.featurize.make_features()`:
+
+- `TARGET` を y として分離
+- `ID_COL` は X から除外
+- 文字列 target は `LabelEncoder` で数値化し、submission 時に元ラベルへ戻す
+
+## Git 管理
+
+Git 管理しない:
+
+- `data/*/`
+- `outputs/`
+- `submission.csv`
+- `*.db`, `*.sqlite*`
+- `conf/secret.yaml`
+- `.venv/`
+
+Git 管理する:
+
+- `configs/*.yaml`
+- `docs/`
+- `src/`
+- `infra/Dockerfile`
+- `conf/project.yaml`

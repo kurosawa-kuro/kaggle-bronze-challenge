@@ -4,19 +4,21 @@
 
 | 用語 | 意味 |
 |---|---|
-| **Competition（コンペ）** | 参加する Kaggle コンペティション。表形式データが対象 |
-| **Target** | 予測する目的変数。`conf/config.yaml` の `target` で指定 |
-| **Fold** | CV（交差検証）の分割単位。デフォルト 5-fold |
-| **OOF（Out-of-Fold）** | 各 fold で学習に使わなかったデータへの予測値。全サンプル分を結合したものが CV スコアの計算に使われる |
-| **CV Score** | OOF 全体に対するスコア（RMSE / AUC / logloss 等）。Public LB の代理指標として使う |
-| **Public LB** | Kaggle が公開するリーダーボード。テストデータの一部（20-30%）で計算される |
-| **Private LB** | 締切後に確定するリーダーボード。残りのテストデータで計算。最終順位はこちら |
-| **Feature Engineering（FE）** | 特徴量の生成・加工。`src/features/` に 1 アイデア = 1 ファイルで管理 |
-| **Baseline** | 最初のシンプルなモデル（生データ + LightGBM）。48h 以内に提出する |
-| **Experiment（実験）** | モデル × FE の 1 組み合わせ。`notebooks/` に 1 ファイルで保存 |
-| **Ensemble** | 複数モデルの予測を結合する。ブロンズ圏では単純平均で十分 |
-| **Submission** | Kaggle に提出する予測ファイル（`submission.csv`） |
-| **run_id** | 実験を一意に識別する ID（`YYYYMMDD_HHMMSS_モデル_ランダム4桁`）|
+| Competition | Kaggle コンペ。path / GCS prefix / run_id 成果物の単位 |
+| Config | `configs/*.yaml` の実験設定。data / model / cv / seeds / runtime を持つ |
+| Target | 目的変数。`data.target` または `conf/config.yaml` の `target` |
+| Fold | CV の分割単位。regression は KFold、それ以外は StratifiedKFold |
+| Seed | CV 分割とモデル乱数の種。full run では `seeds` による seed 平均を行う |
+| OOF | Out-of-Fold 予測。CV score と分析に使う |
+| CV Score | OOF から計算する主指標。Public LB より優先する |
+| Run | 1 回の実験実行。`run_id` で識別する |
+| run_id | 成果物・BQ ログ・コストログを JOIN する識別子 |
+| Run Artifact | `outputs/runs/<comp>/<run_id>/` と GCS `runs/<comp>/<run_id>/` の成果物一式 |
+| Sweep | 複数 config を複数 Vertex Custom Job として並列投入する実験 |
+| Tune | Optuna による単一マシン HPO |
+| HP Tuning | Vertex Hyperparameter Tuning（Vizier）による managed HPO |
+| Cost Estimate | Vertex job の概算コスト。BigQuery `kaggle_ops.cost_estimates` に記録 |
+| Submission | Kaggle へ提出する `submission.csv`。通常は run artifact 内のものを使う |
 
 ## 実験ライフサイクル
 
@@ -24,43 +26,80 @@
 新コンペ参加
   │
   ▼
-config.yaml 更新 + data/raw/ にデータ配置
+make init COMP=<slug>
   │
   ▼
-EDA（target 分布・欠損・feature correlation）
+conf/config.yaml / configs/*.yaml を調整
   │
   ▼
-make run → Baseline (exp001_lgbm_base)
-  │         CV Score を SQLite に記録
+make smoke
   │
   ▼
-特徴量追加 → make run → CV Score 改善を確認
+make train-local RUN_ID=<id>
+  │
+  ├─ outputs/runs/<comp>/<run_id>/ を確認
+  └─ BigQuery experiments を確認（make logs）
   │
   ▼
-モデル変更（CatBoost 等）→ make run → 比較
+重い実験が必要なら:
+  make gcp-bootstrap
+  make stage-data
+  make build-push
+  make train-vertex RUN_ID=<id>
+  make collect RUN_ID=<id>
+  make cost-record RUN_ID=<id>
   │
   ▼
-アンサンブル（複数モデルの平均）
+改善ループ:
+  ├─ feature / params を変えて train-local
+  ├─ make sweep CONFIGS="..." TAG=<tag>
+  ├─ make tune RUN_ID=<id>
+  └─ make hp-tune RUN_ID=<id>
   │
   ▼
-最終提出: CV 最良 + LB 最良 の 2 本を選択
+make submit RUN_ID=<id> MSG=<msg>
 ```
 
-## CV スコアと提出の関係
+## Run の状態
+
+| 状態 | 代表コマンド | 成果 |
+|---|---|---|
+| Planned | config 作成 | `configs/*.yaml` |
+| SmokeChecked | `make smoke` | 1 fold 相当の軽量 artifact |
+| LocalTrained | `make train-local` | local artifact + BQ experiment |
+| Staged | `make stage-data` | GCS raw data |
+| Submitted | `make train-vertex` / `make sweep` / `make hp-tune` | Vertex job 作成 |
+| Collected | `make collect` | GCS artifact を local に回収 |
+| CostRecorded | `make cost-record` | BigQuery cost estimate |
+| SubmittedToKaggle | `make submit` | Kaggle submission |
+
+## CV と提出の関係
 
 ```
-CV Score（主指標）  ─→  提出候補 A（CV 最良）
-                   ─→  提出候補 B（Public LB 最良）
-                         ↓
-                   Kaggle に 2 本を提出して選択
-                         ↓
-                   Private LB で最終順位確定
+CV Score（主指標）
+  ├─ CV 最良 run_id
+  └─ Public LB 良好 run_id
+        │
+        ▼
+Kaggle で最終提出候補を選択
+        │
+        ▼
+Private LB で最終順位確定
 ```
 
-- CV スコアを主指標にする（Public LB に引きずられない）
-- Public LB と CV の乖離が大きい場合はデータリークを疑う
+- Public LB に引きずられない。まず CV を見る。
+- Public LB と CV が大きく乖離する場合はリーク、分布差、過学習を疑う。
+- seed 平均は full run の安定化策。smoke では `cv.seed` 単発。
+
+## 実験ログと成果物の責務
+
+| 対象 | 正本 | 目的 |
+|---|---|---|
+| config / oof / prediction / submission / log | run artifact（local + GCS） | 再現・提出・分析 |
+| cv_score / params / notes | BigQuery `<bqDataset>.experiments` | 横断比較 |
+| job cost | BigQuery `kaggle_ops.cost_estimates` | run_id 単位の費用把握 |
 
 ## 関連タスク
 
-- 新しい用語・状態・ビジネスルールの変更は task に背景と影響範囲を残してから反映する。
-- 未確定の業務ルールはこの文書へ入れず、`docs/tasks/backlog/` で調査対象として管理する。
+- 新しい状態・用語・ルールは task に背景を残してから反映する。
+- 未実装の構想はこの文書で実装済み用語として扱わない。
