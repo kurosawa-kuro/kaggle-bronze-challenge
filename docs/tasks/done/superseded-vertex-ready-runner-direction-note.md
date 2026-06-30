@@ -1,3 +1,22 @@
+# Superseded: Vertex-ready 初期方針メモ
+
+Status: Superseded
+
+このメモは ADR 0001 時点の「Custom Job + GCS + Artifact Registry に絞る」初期方針メモ。
+現在は ADR 0002 により、非 DL/GPU の Vertex/GCP マネージド機能をより広く使う方針へ進んでいる。
+
+現コードでは以下も実装済み:
+- `src/runner/` への entrypoint 集約
+- BigQuery `experiments` / `cost_estimates`
+- seed 平均
+- sweep
+- Optuna tune
+- Vertex Hyperparameter Tuning
+- cost tracking / Discord notify
+
+したがって、このメモを active な設計根拠として使わない。
+歴史的な判断ログとしてのみ残す。
+
 結論
 
 これで方針確定で良いです。
