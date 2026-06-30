@@ -12,3 +12,4 @@ kaggle>=1.6
 google-cloud-aiplatform>=1.60
 google-cloud-storage>=2.18
 google-auth>=2.30
+cloudml-hypertune>=0.1.0.dev6

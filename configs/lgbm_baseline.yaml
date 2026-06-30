@@ -20,6 +20,9 @@ cv:
   n_folds: 5
   seed: 42
 
+# seed 平均（full run のみ。smoke は cv.seed 単発）。空/未指定なら [cv.seed]。
+seeds: [42, 777, 2026]
+
 runtime:
   experiments_db: "data/experiments.db"
   output_root: "outputs/runs"

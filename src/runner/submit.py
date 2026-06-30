@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 from pathlib import Path
 
@@ -39,7 +40,9 @@ def main(argv: list[str] | None = None) -> int:
         args.message,
     ]
     print("[submit] " + " ".join(cmd))
-    return subprocess.run(cmd, check=False).returncode
+    # kaggle CLI に PYTHONPATH=src を渡すと自前モジュールが shadow されるため除去
+    env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}
+    return subprocess.run(cmd, check=False, env=env).returncode
 
 
 if __name__ == "__main__":

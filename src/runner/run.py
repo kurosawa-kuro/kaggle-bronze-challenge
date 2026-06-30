@@ -2,8 +2,6 @@
 モデルや特徴量を変えるときはここの import を 1〜2 行変える。
 実験が確定したら notebooks/ にコピーして保存する。
 """
-import sys; sys.path.insert(0, "src")
-
 from pipelines.ingest import load_data
 from pipelines.featurize import make_features
 from models.lgbm import train_cv

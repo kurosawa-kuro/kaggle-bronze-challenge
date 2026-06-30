@@ -1,8 +1,12 @@
-.PHONY: setup run nb logs clean init download submit smoke train-local train-vertex collect build-push gcp-bootstrap submit-legacy
+.PHONY: setup run nb logs clean init download submit smoke train-local train-vertex collect build-push gcp-bootstrap submit-legacy stage-data cost cost-record cost-notify sweep tune hp-tune
 
 VENV   := .venv
 PYTHON := $(VENV)/bin/python
 UV     := uv
+# entrypoints は src/runner/ パッケージ。runner 実行時のみ src を import パスに通す
+# （gcloud/bq/kaggle 等の外部 Python CLI に PYTHONPATH=src を渡すと自身の utils を
+#   こちらの src/utils で shadow され壊れるため、グローバル export はしない）。
+PYRUN  := PYTHONPATH=src $(PYTHON) -m
 CONFIG ?= configs/lgbm_baseline.yaml
 RUN_ID ?= $(shell date -u +%Y%m%d_%H%M%S)
 PROJECT_CONFIG ?= conf/project.yaml
@@ -12,7 +16,10 @@ AR_REPO ?= $(shell $(PYTHON) -c 'import yaml; print((yaml.safe_load(open("$(PROJ
 IMAGE_NAME ?= $(shell $(PYTHON) -c 'import yaml; print((yaml.safe_load(open("$(PROJECT_CONFIG)")) or {}).get("imageName") or "kaggle-bronze-challenge")' 2>/dev/null)
 IMAGE_TAG ?= $(shell $(PYTHON) -c 'import yaml; print((yaml.safe_load(open("$(PROJECT_CONFIG)")) or {}).get("imageTag") or "latest")' 2>/dev/null)
 GCS_BUCKET ?= $(shell $(PYTHON) -c 'import yaml; print((yaml.safe_load(open("$(PROJECT_CONFIG)")) or {}).get("gcsBucket") or "")' 2>/dev/null)
+COMP_DATA ?= $(shell $(PYTHON) -c 'import yaml; c=yaml.safe_load(open("conf/config.yaml")) or {}; print(c.get("comp") or c.get("data", {}).get("comp") or "")' 2>/dev/null)
 IMAGE ?= $(REGION)-docker.pkg.dev/$(GCP_PROJECT)/$(AR_REPO)/$(IMAGE_NAME):$(IMAGE_TAG)
+# overnight バッチ既定で Spot（約1/3以下）。on-demand にするには: make train-vertex SPOT=
+SPOT ?= --spot
 
 # 初期セットアップ: venv 作成 + 依存インストール
 setup:
@@ -22,15 +29,15 @@ setup:
 
 # 現在の実験を実行 (run.py)
 run:
-	$(PYTHON) run.py
+	$(PYRUN) runner.run
 
 # Vertex-ready runner: quick one-fold local check
 smoke:
-	$(PYTHON) train.py --config $(CONFIG) --run-id $(RUN_ID) --smoke
+	$(PYRUN) runner.train --config $(CONFIG) --run-id $(RUN_ID) --smoke
 
 # Vertex-ready runner: full local training
 train-local:
-	$(PYTHON) train.py --config $(CONFIG) --run-id $(RUN_ID)
+	$(PYRUN) runner.train --config $(CONFIG) --run-id $(RUN_ID)
 
 # Build and push the training image to Artifact Registry
 build-push:
@@ -43,13 +50,44 @@ gcp-bootstrap:
 	gcloud artifacts repositories describe $(AR_REPO) --location=$(REGION) --project=$(GCP_PROJECT) >/dev/null 2>&1 || gcloud artifacts repositories create $(AR_REPO) --repository-format=docker --location=$(REGION) --project=$(GCP_PROJECT)
 	gcloud storage buckets describe gs://$(GCS_BUCKET) >/dev/null 2>&1 || gcloud storage buckets create gs://$(GCS_BUCKET) --project=$(GCP_PROJECT) --location=$(REGION) --uniform-bucket-level-access
 
-# Submit the same train.py contract to Vertex Custom Job
+# Stage local raw data to GCS so the Vertex container can fetch it (train.py --input-uri)
+stage-data:
+	gcloud storage cp --recursive data/$(COMP_DATA)/raw gs://$(GCS_BUCKET)/data/$(COMP_DATA)/
+
+# Submit the same train.py contract to Vertex Custom Job (Spot by default)
 train-vertex:
-	$(PYTHON) vertex_run.py --config $(CONFIG) --run-id $(RUN_ID) --image-uri $(IMAGE)
+	$(PYRUN) runner.vertex_run --config $(CONFIG) --run-id $(RUN_ID) --image-uri $(IMAGE) $(SPOT)
+
+# Optuna 探索（1マシン）。best params を run_id 成果物に保存。N_TRIALS / FINAL=--final
+# make tune CONFIG=configs/lgbm_baseline.yaml RUN_ID=tune01 N_TRIALS=30
+tune:
+	$(PYRUN) runner.tune --config $(CONFIG) --run-id $(RUN_ID) --n-trials $(or $(N_TRIALS),30) $(FINAL)
+
+# Vertex Hyperparameter Tuning (Vizier) — マネージド並列探索。MAX_TRIALS / PARALLEL
+# make hp-tune CONFIG=configs/lgbm_baseline.yaml RUN_ID=hpt01 MAX_TRIALS=20 PARALLEL=4
+hp-tune:
+	$(PYRUN) runner.hp_tune --config $(CONFIG) --run-id $(RUN_ID) --image-uri $(IMAGE) --max-trials $(or $(MAX_TRIALS),20) --parallel-trials $(or $(PARALLEL),4)
+
+# Fan out multiple configs as parallel Vertex Custom Jobs (Spot by default)
+# make sweep CONFIGS="configs/a.yaml configs/b.yaml" TAG=exp01
+sweep:
+	$(PYRUN) runner.sweep --configs $(CONFIGS) $(if $(TAG),--tag $(TAG),) --image-uri $(IMAGE) $(SPOT)
 
 # Collect artifacts from gs://<bucket>/runs/<competition>/<run_id>
 collect:
-	$(PYTHON) collect.py --config $(CONFIG) --run-id $(RUN_ID)
+	$(PYRUN) runner.collect --config $(CONFIG) --run-id $(RUN_ID)
+
+# Record a finished Vertex job's estimated cost into BigQuery (kaggle_ops.cost_estimates)
+cost-record:
+	$(PYRUN) runner.costs record --config $(CONFIG) --run-id $(RUN_ID)
+
+# Show month-to-date estimated GCP cost vs ¥1000/¥5000 thresholds
+cost:
+	$(PYRUN) runner.costs report --config $(CONFIG)
+
+# Push the month-to-date cost summary to Discord (webhook in conf/secret.yaml)
+cost-notify:
+	$(PYRUN) runner.costs notify --config $(CONFIG)
 
 # 特定のノートブック実験を実行: make nb NB=exp002_catboost_base
 nb:
@@ -72,7 +110,7 @@ download:
 
 # Kaggle 提出: make submit CONFIG=configs/lgbm_baseline.yaml RUN_ID=exp001 MSG="exp001 lgbm baseline"
 submit:
-	doppler run -- sh -c 'KAGGLE_API_TOKEN="$$ML_KAGGLE_TOKEN" $(PYTHON) submit.py --config $(CONFIG) --run-id $(RUN_ID) --message "$(MSG)"'
+	doppler run -- sh -c 'KAGGLE_API_TOKEN="$$ML_KAGGLE_TOKEN" PYTHONPATH=src $(PYTHON) -m runner.submit --config $(CONFIG) --run-id $(RUN_ID) --message "$(MSG)"'
 
 # 旧提出経路: repository root の submission.csv を直接提出
 submit-legacy:

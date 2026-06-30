@@ -24,5 +24,10 @@ imageTag: latest
 # {gcpRegion}-docker.pkg.dev/{gcpProject}/{artifactRegistryRepo}/{imageName}:{imageTag}
 imageUri:
 gcsBucket: mlops-dev-a-kaggle-bronze-runs
-vertexMachineType: n1-standard-4
+# コスト概算ロガー（costs.py / kaggle_ops.cost_estimates）の円換算レート
+bqDataset: kaggle_ops
+jpyPerUsd: 150
+# full run 向け（8物理コア, ローカル i7-8700 超）。smoke/EDA はローカルで回す。
+# per-run を更に速くするなら c2-standard-16（高クロック）。GPU は bronze では不要。
+vertexMachineType: n2-standard-16
 vertexServiceAccount:

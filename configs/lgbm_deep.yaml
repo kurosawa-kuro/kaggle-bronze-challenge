@@ -1,0 +1,28 @@
+data:
+  comp: "playground-series-s6e6"
+  target: "class"
+  id_col: "id"
+  objective: "multiclass"
+  metric: "logloss"
+
+model:
+  name: "lgbm"
+  params:
+    num_leaves: 255
+    min_child_samples: 60
+    learning_rate: 0.03
+    feature_fraction: 0.7
+    bagging_fraction: 0.9
+    lambda_l1: 0.5
+    lambda_l2: 0.5
+
+cv:
+  n_folds: 5
+  seed: 42
+
+seeds: [42, 777, 2026]
+
+runtime:
+  output_root: "outputs/runs"
+  num_boost_round: 3000
+  early_stopping_rounds: 80

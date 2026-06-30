@@ -29,7 +29,8 @@ src/
     ensemble.py
   features/              ← add_*() FE 関数群（1アイデア=1ファイル）
   utils/
-    logger.py            ← SQLite 実験ログ
+    bq.py                ← BigQuery 共通ヘルパ（bq CLI 経由、costs/logger 共有）
+    logger.py            ← 実験ログ → BigQuery (kaggle_ops.experiments)
 notebooks/               ← 実験スクリプト（1実験=1ファイル）
   exp001_lgbm_base.py
   exp002_catboost_base.py
@@ -39,7 +40,6 @@ data/
     raw/                 ← Bronze layer（Kaggle 生データ、gitignore）
     interim/             ← Silver layer（前処理済み parquet、gitignore）
     features/            ← Gold layer（特徴量 parquet、gitignore）
-  experiments.db         ← 実験ログ SQLite（全コンペ共通）
 outputs/
   runs/<comp>/<run_id>/  ← run_id 成果物（config/metrics/oof/test_pred/submission/log）
 ```

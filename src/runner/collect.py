@@ -2,12 +2,9 @@
 from __future__ import annotations
 
 import argparse
-import sys
 from pathlib import Path
 
 import yaml
-
-sys.path.insert(0, "src")
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:

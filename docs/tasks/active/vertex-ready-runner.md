@@ -244,3 +244,11 @@ def submit(*, project, region, bucket, image_uri, config_path, run_id, comp,
 - 2026-06-30: `make run` 成功（CV logloss=0.08763）。`make train-local CONFIG=configs/lgbm_baseline.yaml RUN_ID=local_full_check` 成功し、同じ CV logloss=0.08763 と run_id 成果物一式を生成。
 - 2026-06-30: `make smoke CONFIG=configs/lgbm_baseline.yaml RUN_ID=smoke_check` 成功。`docker build -f infra/Dockerfile -t kaggle-bronze-challenge:local .` と `docker run --rm kaggle-bronze-challenge:local train.py --config configs/lgbm_baseline.yaml --run-id container_dryrun --dry-run` 成功。
 - 2026-06-30: GCP active account/project は `kurokawa81toshifumi@gmail.com` / `mlops-dev-a`。`gcsBucket=mlops-dev-a-kaggle-bronze-runs` と AR repo `kaggle` は未作成だったため、コスト発生を避けて実作成・push・Vertex 実投入は保留。明示実行用に `make gcp-bootstrap` を追加。
+- 2026-06-30 GCP 実検証（承認済み）: `make gcp-bootstrap`（API/AR repo/bucket 作成）と `make build-push` 成功。実投入で **2 つのギャップを検出・修正**:
+  - (1) **データ未配送**: `.dockerignore` が `data/` を除外しコンテナにデータが無い → `load_data()` が California Housing にフォールバックし `TARGET="class"` で KeyError。修正: `make stage-data`（`data/<comp>/raw`→`gs://<bucket>/data/<comp>/raw`）+ `train.py --input-uri`（起動時 DL）+ `vertex_run.py` が `--input-uri`/`--smoke` をコンテナへ伝播。第2投入のログで `[train] staged 3 input files` を確認＝配送経路 OK。
+  - (2) **libgomp1 欠落**: `python:3.12-slim` に OpenMP ランタイムが無く LightGBM import で `OSError: libgomp.so.1`。修正: `infra/Dockerfile` に `apt-get install -y libgomp1`。
+  - 連動ドキュメント更新: `CLAUDE.md`（stage-data）/ `04_workflows.md`（staging 手順・データ配送注記）/ `02_architecture.md`（データ配送節）。
+  - 1 回目 Job `3120028079636873216` は libgomp1 欠落で FAILED。
+  - 2026-06-30 **smoke2 Job `1302544155016167424` SUCCEEDED**（PENDING→RUNNING→SUCCEEDED、約6分）。GCS に run_id 成果物 7 点を生成し `make collect` で `outputs/runs/...` へ回収成功（config/metrics/oof/test_pred/feature_importance/submission/log）。metrics: smoke=true, n_folds_trained=1, cv_score=0.3276（1fold/20round の smoke 値。full local の 0.08763 とは非比較）。**local↔Vertex の run_id 成果物契約が実機で一致**を確認。
+  - 未実施: Kaggle へのスコア提出（`make submit`）は smoke 結果のため見送り。実スコアは full run（`make train-vertex`、smoke なし）で実施する。
+  - 残コスト: GCS のステージングデータ/run 成果物・AR イメージは保持（次回 run の前提）。常駐課金リソースなし。

@@ -21,7 +21,7 @@ Kaggle ブロンズ取得を目的とした LightGBM 主軸・表形式データ
 | [04_workflows.md](./04_workflows.md) | 作業開始、検証、リリース前確認のコマンド |
 | [07_test_strategy.md](./07_test_strategy.md) | タスク完了前に通す品質ゲート |
 
-`docs/tasks/` は仕様の正本ではないが、日々の実行順・証跡・未決事項の正本として扱う。確定した仕様は `docs/specs/` や 01〜08 文書へ、判断理由は `docs/adr/` へ昇格する。
+`docs/tasks/` は仕様の正本ではないが、日々の実行順・証跡・未決事項の正本として扱う。着手前の機能スペックは root `SPEC.md`、確定した仕様は 01〜08 文書へ、判断理由は `docs/adr/` へ昇格する。
 
 ## ドキュメント一覧
 
@@ -36,6 +36,8 @@ Kaggle ブロンズ取得を目的とした LightGBM 主軸・表形式データ
 | [07_test_strategy.md](./07_test_strategy.md) | テスト方針と品質ゲート |
 | [08_release_runbook.md](./08_release_runbook.md) | リリース・マイグレーション・復旧 |
 | [tasks/README.md](./tasks/README.md) | 日次運用の実行ハブ、作業計画、実装タスク |
+
+着手前の機能スペックはリポジトリ直下の `SPEC.md`（公式 spec-driven フロー）。完了後は確定内容を 01〜08 / ADR へ昇格する。
 
 ## コンペ別記録
 

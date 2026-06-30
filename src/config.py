@@ -25,4 +25,5 @@ SEED: int = int(_cfg.get("seed", _cv.get("seed", 42)))
 DATA_RAW: Path = Path("data") / COMP / "raw"
 DATA_INTERIM: Path = Path("data") / COMP / "interim"
 DATA_FEATURES: Path = Path("data") / COMP / "features"
-EXPERIMENTS_DB: Path = Path(_cfg.get("experiments_db", _runtime.get("experiments_db", "data/experiments.db")))
+# 実験記録は BigQuery `<bqDataset>.experiments` に統一（ADR 0002 / utils.logger）。
+# 旧 SQLite (EXPERIMENTS_DB) は廃止。

@@ -20,9 +20,9 @@ metric: "auc"                   # rmse / auc / logloss / mape
 
 n_folds: 5
 seed: 42
-
-experiments_db: "data/experiments.db"  # 全コンペ共通
 ```
+
+> 実験ログは BigQuery `<bqDataset>.experiments` に統一（ADR 0002）。旧 `experiments_db`（SQLite）設定は廃止。
 
 データパス（`data_raw` 等）は `src/config.py` が `comp` から自動導出するため config.yaml への記載不要。
 
@@ -47,7 +47,6 @@ cv:
   seed: 42
 
 runtime:
-  experiments_db: "data/experiments.db"
   output_root: "outputs/runs"
   num_boost_round: 2000
   early_stopping_rounds: 50
@@ -69,7 +68,7 @@ runtime:
 | **Silver** | `data/<comp>/interim/train.parquet` | Parquet | null 埋め・エンコード済み学習データ | ✅ |
 | **Silver** | `data/<comp>/interim/test.parquet` | Parquet | null 埋め・エンコード済みテストデータ | ✅ |
 | **Gold** | `data/<comp>/features/` | Parquet | 特徴量エンジニアリング済みデータ（将来利用） | ✅ |
-| — | `data/experiments.db` | SQLite | 実験ログ（全コンペ共通） | ✅ |
+| — | BigQuery `<bqDataset>.experiments` | BQ テーブル | 実験ログ（全コンペ共通、run_id で cost_estimates と JOIN 可） | — |
 | — | `submission.csv` | CSV | Kaggle 提出ファイル | ✅ |
 | — | `outputs/runs/<comp>/<run_id>/` | mixed | run_id 成果物一式 | ✅ |
 
@@ -90,28 +89,34 @@ outputs/runs/<competition>/<run_id>/
 
 Vertex 実行時は同じ内容を `gs://<bucket>/runs/<competition>/<run_id>/` に upload し、`collect.py` がローカルの `outputs/runs/` へ 1:1 で再現する。
 
-## 実験ログ（SQLite）
+## 実験ログ（BigQuery）
 
-`data/experiments.db` の `experiments` テーブル:
+BigQuery `<bqDataset>.experiments`（`conf/project.yaml` の `bqDataset`、既定 `kaggle_ops`）。
+`src/utils/logger.py` が初回 `CREATE TABLE IF NOT EXISTS` で自動作成し、`log_run()` で 1 run = 1 行を記録する。
+`gcpProject` 未設定 / オフライン時は no-op（ローカル smoke を止めない）。
 
 ```sql
-CREATE TABLE experiments (
-    run_id    TEXT PRIMARY KEY,   -- 例: 20260617_025414_lgbm_710b
-    timestamp TEXT,               -- ISO 8601 UTC
-    cv_score  REAL,               -- 小さいほど良い (rmse) or 大きいほど良い (auc)
-    params    TEXT,               -- JSON 形式のハイパラ
-    notes     TEXT                -- 実験メモ (例: "exp001: lgbm baseline")
+CREATE TABLE IF NOT EXISTS kaggle_ops.experiments (
+    run_id      STRING,      -- 例: 20260617_025414_lgbm_710b
+    recorded_at TIMESTAMP,   -- UTC
+    cv_score    FLOAT64,     -- 小さいほど良い (rmse) or 大きいほど良い (auc)
+    metric      STRING,      -- rmse / auc / logloss / mape
+    competition STRING,      -- comp slug
+    params      STRING,      -- JSON 形式のハイパラ
+    notes       STRING,      -- 実験メモ
+    source      STRING       -- 記録経路（例: cv）
 );
 ```
 
-DuckDB で集計する例:
+run_id でコスト概算と JOIN（「このスコアを出した実験は ¥いくら使ったか」）:
 
-```python
-import duckdb, sqlite3, pandas as pd
-conn = sqlite3.connect("data/experiments.db")
-df = pd.read_sql("SELECT * FROM experiments ORDER BY timestamp DESC", conn)
-duckdb.sql("SELECT run_id, cv_score, notes FROM df ORDER BY cv_score")
-# または make logs で直近 10 件を表示
+```sql
+SELECT e.run_id, e.cv_score, ROUND(SUM(c.est_jpy), 1) AS est_jpy
+FROM kaggle_ops.experiments e
+LEFT JOIN kaggle_ops.cost_estimates c USING (run_id)
+GROUP BY e.run_id, e.cv_score
+ORDER BY e.cv_score;
+-- または make logs で直近 10 件を表示
 ```
 
 ## 前処理・エンコーディング規約（pipelines/ingest.py）

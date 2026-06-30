@@ -66,11 +66,11 @@ src/
   features/
     base.py          ← ベースライン特徴量
     (追加FEはここにファイルを足す)
+  runner/            ← CLI エントリポイント（python -m runner.X）: train / vertex_run / collect / submit / costs / run
 experiments/
   exp001_lgbm_base.py
   exp002_catboost_base.py
   exp003_ensemble_lgbm_cat.py
-run.py               ← 現在の実験
 env/
   config.yaml        ← データセット設定（非機密）
 data/

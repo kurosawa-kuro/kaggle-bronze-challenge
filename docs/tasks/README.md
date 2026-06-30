@@ -2,7 +2,7 @@
 
 このディレクトリは、毎日の作業計画・調査・実装チェックリスト・完了証跡の実行ハブ。プロダクトの挙動・アーキテクチャ・データモデル・運用 runbook の正本ではないが、「今日何をするか」「次に何をするか」「何を完了したか」はここを正とする。
 
-確定した仕様は `docs/specs/`、判断は `docs/adr/`、繰り返す運用は `docs/runbooks/`、再利用する作業手順は `.claude/skills/` に置く。
+着手前の機能スペックは root `SPEC.md`、確定した仕様は `docs/01〜08`、判断は `docs/adr/`、再利用する作業手順は `.claude/skills/` に置く。
 
 ## 日次運用
 
@@ -11,7 +11,7 @@
 3. 実装前に Scope / Plan / Acceptance Criteria を更新する。
 4. 作業中の判断、検証コマンド、未解決事項を task file に残す。
 5. 完了時に証跡を追記し、必要なら `done/` へ移す。
-6. 仕様として残すべき内容は `docs/specs/` や 01〜08 文書へ昇格する。
+6. 着手前のスペックは root `SPEC.md`、確定した仕様は 01〜08 文書へ昇格する。
 7. 判断理由として残すべき内容は `docs/adr/` へ昇格する。
 
 `tasks/` は軽く保つが、軽すぎて運用履歴が消えるのは避ける。日々の作業で迷ったら、まず task に書いてから実装へ進む。
@@ -35,7 +35,8 @@
 
 | スキル | 用途 |
 |---|---|
-| `.claude/skills/create-task` | ユーザー依頼からタスクノートを作る |
+| `.claude/skills/write-spec` | 公式 spec-driven で着手前に自己完結スペックを root `SPEC.md` に書く |
+| `.claude/skills/create-task` | ユーザー依頼から軽量な日次タスクノートを作る |
 | `.claude/skills/execute-task` | 挙動とテストを保ったままタスクを実行する |
 | `.claude/skills/review-task` | 範囲・根拠・クローズ可否の観点でタスクをレビューする |
 | `.claude/skills/project-review` | プロジェクト構成と責務境界をレビューする |
@@ -48,6 +49,8 @@
 | ファイル | 用途 |
 |---|---|
 | [active/vertex-ready-runner.md](active/vertex-ready-runner.md) | Vertex-ready 実験ランナーの実装（ADR 0001） |
+| [done/hpo-leverage-phase1.md](done/hpo-leverage-phase1.md) | ✅ GCP レバレッジ Phase1（seed平均 / sweep / Optuna / Vertex HP Tuning） |
+| [done/cost-tracking-bigquery.md](done/cost-tracking-bigquery.md) | ✅ GCP コスト可視化を BigQuery に統一（予算アラート + 概算ロガー + Discord） |
 | [active/refactoring-candidates.md](active/refactoring-candidates.md) | 残りのクリーンアップ候補 |
 
 ## ルール
