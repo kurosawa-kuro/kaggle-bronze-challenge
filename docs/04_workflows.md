@@ -5,6 +5,7 @@
 ```bash
 make setup    # uv venv 作成 + 依存インストール（初回のみ）
 make run      # California Housing で動作確認
+make smoke CONFIG=configs/lgbm_baseline.yaml  # Vertex-ready runner の短時間確認
 ```
 
 ## 新コンペ参加フロー
@@ -36,6 +37,9 @@ rules 未同意エラーが出た場合は `https://www.kaggle.com/c/<slug>/rule
 ```bash
 # 現在の実験を実行
 make run
+
+# config 駆動の実験をローカル実行（outputs/runs/<comp>/<run_id>/ に成果物）
+make train-local CONFIG=configs/lgbm_baseline.yaml RUN_ID=exp001_lgbm
 
 # 特定のノートブック実験を再実行（履歴を再実行したいとき）
 make nb NB=exp001_lgbm_base
@@ -83,6 +87,29 @@ make run
 make nb NB=exp003_ensemble_lgbm_cat
 ```
 
+## Vertex-ready 実験フロー
+
+`train.py --config` は local / Vertex Custom Job 共通の学習入口。学習成果物は同じ run_id レイアウトに保存する。
+
+```bash
+# 1 fold だけ短時間で確認
+make smoke CONFIG=configs/lgbm_baseline.yaml RUN_ID=smoke_lgbm
+
+# ローカル full run
+make train-local CONFIG=configs/lgbm_baseline.yaml RUN_ID=exp001_lgbm
+
+# 学習 image を Artifact Registry へ push
+make build-push
+
+# Vertex Custom Job へ投入
+make train-vertex CONFIG=configs/lgbm_baseline.yaml RUN_ID=exp001_lgbm
+
+# GCS の成果物を outputs/runs/ に回収
+make collect CONFIG=configs/lgbm_baseline.yaml RUN_ID=exp001_lgbm
+```
+
+GCP 設定は `conf/project.yaml` の `gcpProject` / `gcpRegion` / `gcsBucket` / Artifact Registry 項目に置く。ローカル投入は ADC、Vertex コンテナ内はアタッチされた Service Account を使う。
+
 ## 最終提出前チェック
 
 ```bash
@@ -92,6 +119,9 @@ ls submission.csv  # 提出ファイルを確認
 
 # Kaggle CLI で提出
 make submit COMP=<competition-name> MSG="exp001 lgbm baseline cv=0.44498"
+
+# run_id 成果物から提出
+make submit-run CONFIG=configs/lgbm_baseline.yaml RUN_ID=exp001_lgbm MSG="exp001 lgbm baseline"
 ```
 
 ## 作業終了

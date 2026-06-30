@@ -37,6 +37,7 @@ Vertex を使うことが目的ではなく、「Vertex に投げてもローカ
 - Endpoint
 - Model Registry
 - Monitoring
+- GKE クラスタ / KServe / Cloud Composer を**実行基盤として**立てること（バッチ実験のスループットには寄与せず、常駐コスト・運用面だけ増える。隣接リポジトリ `study-gcp-search-mlops-gke` からは**コード資産のみ流用**し、クラスタ基盤は採用しない。詳細判断は `docs/tasks/active/vertex-ready-runner.md`「GKE をどこまで使うか」）
 
 ### 実行分担
 

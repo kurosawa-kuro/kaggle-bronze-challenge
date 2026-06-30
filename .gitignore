@@ -67,6 +67,7 @@ htmlcov/
 .venv/
 venv/
 artifacts/
+outputs/
 
 # Terraform
 .terraform/

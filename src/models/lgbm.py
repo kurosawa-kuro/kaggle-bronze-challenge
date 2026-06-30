@@ -25,9 +25,21 @@ _PARAMS: dict = {
 
 
 def train_cv(
-    X_train, y_train, params: dict | None = None, notes: str = ""
+    X_train,
+    y_train,
+    params: dict | None = None,
+    notes: str = "",
+    *,
+    n_folds: int | None = None,
+    seed: int | None = None,
+    max_folds: int | None = None,
+    num_boost_round: int = 2000,
+    early_stopping_rounds: int = 50,
+    log_run_id: str | None = None,
 ) -> tuple[np.ndarray, list[lgb.Booster]]:
-    lgb_params = {**_PARAMS, **(params or {})}
+    n_folds = n_folds or N_FOLDS
+    seed = seed or SEED
+    lgb_params = {**_PARAMS, "seed": seed, **(params or {})}
 
     # multiclass: num_class 自動設定 + LightGBM の metric 名を合わせる
     if OBJECTIVE == "multiclass":
@@ -37,7 +49,9 @@ def train_cv(
             lgb_params["metric"] = "multi_logloss"
 
     num_class = lgb_params.get("num_class", 1)
-    splits = _splits(X_train, y_train)
+    splits = _splits(X_train, y_train, n_folds=n_folds, seed=seed)
+    if max_folds is not None:
+        splits = splits[:max_folds]
 
     # multiclass は (n_samples, n_classes)、それ以外は (n_samples,)
     oof = np.zeros((len(y_train), num_class)) if num_class > 1 else np.zeros(len(y_train))
@@ -51,10 +65,10 @@ def train_cv(
         model = lgb.train(
             lgb_params,
             lgb.Dataset(X_tr, label=y_tr),
-            num_boost_round=2000,
+            num_boost_round=num_boost_round,
             valid_sets=[lgb.Dataset(X_val, label=y_val)],
             callbacks=[
-                lgb.early_stopping(stopping_rounds=50, verbose=False),
+                lgb.early_stopping(stopping_rounds=early_stopping_rounds, verbose=False),
                 lgb.log_evaluation(period=200),
             ],
         )
@@ -63,21 +77,21 @@ def train_cv(
 
         score = cv_score(y_val.values, oof[val_idx])
         fold_scores.append(score)
-        print(f"  [lgbm] fold {fold + 1}/{N_FOLDS}  {METRIC}={score:.5f}")
+        print(f"  [lgbm] fold {fold + 1}/{len(splits)}  {METRIC}={score:.5f}")
 
-    _log(fold_scores, lgb_params, notes)
+    _log(fold_scores, lgb_params, notes, run_id=log_run_id)
     return oof, models
 
 
-def _splits(X, y):
+def _splits(X, y, *, n_folds: int, seed: int):
     if OBJECTIVE == "regression":
-        return list(KFold(n_splits=N_FOLDS, shuffle=True, random_state=SEED).split(X))
-    return list(StratifiedKFold(n_splits=N_FOLDS, shuffle=True, random_state=SEED).split(X, y))
+        return list(KFold(n_splits=n_folds, shuffle=True, random_state=seed).split(X))
+    return list(StratifiedKFold(n_splits=n_folds, shuffle=True, random_state=seed).split(X, y))
 
 
-def _log(fold_scores, params, notes):
+def _log(fold_scores, params, notes, *, run_id: str | None = None):
     mean = float(np.mean(fold_scores))
     std = float(np.std(fold_scores))
     print(f"\n[lgbm] CV {METRIC} = {mean:.5f}  (std={std:.5f})")
-    run_id = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S") + "_lgbm_" + uuid.uuid4().hex[:4]
+    run_id = run_id or datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S") + "_lgbm_" + uuid.uuid4().hex[:4]
     log_run(run_id=run_id, cv_score=mean, params=params, notes=notes)

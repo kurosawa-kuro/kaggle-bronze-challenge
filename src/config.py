@@ -1,21 +1,28 @@
 """コンペ切り替え時は conf/config.yaml の comp と4項目だけ変更する。"""
+import os
 from pathlib import Path
 import yaml
 
-_cfg = yaml.safe_load((Path(__file__).parent.parent / "conf" / "config.yaml").read_text())
+_ROOT = Path(__file__).parent.parent
+_cfg_path = Path(os.environ.get("KBC_CONFIG_PATH", _ROOT / "conf" / "config.yaml"))
+_cfg = yaml.safe_load(_cfg_path.read_text()) or {}
 
-COMP: str = _cfg["comp"]
+_data = _cfg.get("data", {})
+_cv = _cfg.get("cv", {})
+_runtime = _cfg.get("runtime", {})
 
-TARGET: str = _cfg["target"]
-ID_COL: str | None = _cfg["id_col"]
-OBJECTIVE: str = _cfg["objective"]   # regression / binary / multiclass
-METRIC: str = _cfg["metric"]         # rmse / auc / logloss / mape
+COMP: str = _cfg.get("comp") or _data["comp"]
 
-N_FOLDS: int = _cfg["n_folds"]
-SEED: int = _cfg["seed"]
+TARGET: str = _cfg.get("target") or _data["target"]
+ID_COL: str | None = _cfg.get("id_col", _data.get("id_col"))
+OBJECTIVE: str = _cfg.get("objective") or _data["objective"]   # regression / binary / multiclass
+METRIC: str = _cfg.get("metric") or _data["metric"]             # rmse / auc / logloss / mape
+
+N_FOLDS: int = int(_cfg.get("n_folds", _cv.get("n_folds", 5)))
+SEED: int = int(_cfg.get("seed", _cv.get("seed", 42)))
 
 # データパスは comp から自動導出
 DATA_RAW: Path = Path("data") / COMP / "raw"
 DATA_INTERIM: Path = Path("data") / COMP / "interim"
 DATA_FEATURES: Path = Path("data") / COMP / "features"
-EXPERIMENTS_DB: Path = Path(_cfg.get("experiments_db", "data/experiments.db"))
+EXPERIMENTS_DB: Path = Path(_cfg.get("experiments_db", _runtime.get("experiments_db", "data/experiments.db")))

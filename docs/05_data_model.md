@@ -5,6 +5,8 @@
 | ファイル | 種別 | 内容 |
 |---|---|---|
 | `conf/config.yaml` | 非機密設定 | COMP / TARGET / OBJECTIVE / METRIC / N_FOLDS / SEED |
+| `configs/*.yaml` | 実験設定 | data / model / cv / runtime を含む `train.py --config` 用設定 |
+| `conf/project.yaml` | ローカル project 設定 | repoRoot と GCP project / region / bucket / image 設定 |
 | `conf/secret.yaml` | ローカル秘密情報 | gitignore。Kaggle API トークン等 |
 
 ### conf/config.yaml スキーマ
@@ -24,6 +26,38 @@ experiments_db: "data/experiments.db"  # 全コンペ共通
 
 データパス（`data_raw` 等）は `src/config.py` が `comp` から自動導出するため config.yaml への記載不要。
 
+### configs/*.yaml スキーマ
+
+```yaml
+data:
+  comp: "titanic"
+  target: "Survived"
+  id_col: "PassengerId"
+  objective: "binary"
+  metric: "auc"
+
+model:
+  name: "lgbm"
+  params:
+    learning_rate: 0.05
+    num_leaves: 63
+
+cv:
+  n_folds: 5
+  seed: 42
+
+runtime:
+  experiments_db: "data/experiments.db"
+  output_root: "outputs/runs"
+  num_boost_round: 2000
+  early_stopping_rounds: 50
+  smoke_n_folds: 2
+  smoke_max_folds: 1
+  smoke_num_boost_round: 20
+```
+
+`src/config.py` は旧 `conf/config.yaml` の flat schema と、新しい `configs/*.yaml` の nested schema の両方を読む。`train.py` は `KBC_CONFIG_PATH` を設定してから既存 pipeline/model を import する。
+
 ## データレイヤー（Databricks Medallion）
 
 コンペごとに `data/<comp>/` 以下に分離して保持する。再ダウンロード不要でコンペを切り替えられる。
@@ -37,6 +71,24 @@ experiments_db: "data/experiments.db"  # 全コンペ共通
 | **Gold** | `data/<comp>/features/` | Parquet | 特徴量エンジニアリング済みデータ（将来利用） | ✅ |
 | — | `data/experiments.db` | SQLite | 実験ログ（全コンペ共通） | ✅ |
 | — | `submission.csv` | CSV | Kaggle 提出ファイル | ✅ |
+| — | `outputs/runs/<comp>/<run_id>/` | mixed | run_id 成果物一式 | ✅ |
+
+## run_id 成果物
+
+local / Vertex Custom Job ともに同じレイアウトを正本とする。
+
+```
+outputs/runs/<competition>/<run_id>/
+  config.yaml
+  metrics.json
+  oof.parquet
+  test_pred.parquet
+  feature_importance.csv
+  submission.csv
+  log.txt
+```
+
+Vertex 実行時は同じ内容を `gs://<bucket>/runs/<competition>/<run_id>/` に upload し、`collect.py` がローカルの `outputs/runs/` へ 1:1 で再現する。
 
 ## 実験ログ（SQLite）
 
@@ -74,3 +126,4 @@ duckdb.sql("SELECT run_id, cv_score, notes FROM df ORDER BY cv_score")
 
 - スキーマ変更・前処理の変更は task に目的・移行手順・検証方法を残す。
 - 新コンペへの転用時は `conf/config.yaml` を更新し `data/interim/` と `data/features/` を削除してから `make run` を実行する。
+- Vertex-ready runner では `configs/*.yaml` を増やして `make smoke` → `make train-local` → `make train-vertex` の順に確認する。
