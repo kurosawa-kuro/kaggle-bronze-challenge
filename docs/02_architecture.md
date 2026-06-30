@@ -10,6 +10,13 @@ conf/                    ← 設定（コンペ切り替え時はここだけ変
 src/
   config.py              ← conf/config.yaml を定数化
   ports.py               ← Protocol 定義（ModelTrainer / FeatureTransformer）
+  runner/                ← CLI エントリポイント群（python -m runner.X / PYTHONPATH=src）
+    train.py             ← config 駆動の実験ランナー（local / Vertex 共通）
+    vertex_run.py        ← Vertex Custom Job 投入
+    collect.py           ← GCS から run_id 成果物回収
+    submit.py            ← submission を Kaggle 提出
+    costs.py             ← コスト概算ロガー（BigQuery）
+    run.py               ← 旧・実験エントリポイント（make run）
   pipelines/             ← ML パイプラインステージ（Databricks パターン）
     ingest.py            ← Bronze→Silver: load_data() + encode()
     featurize.py         ← Silver→Gold: make_features()
@@ -33,8 +40,12 @@ data/
     interim/             ← Silver layer（前処理済み parquet、gitignore）
     features/            ← Gold layer（特徴量 parquet、gitignore）
   experiments.db         ← 実験ログ SQLite（全コンペ共通）
-run.py                   ← 現在の実験エントリポイント
+outputs/
+  runs/<comp>/<run_id>/  ← run_id 成果物（config/metrics/oof/test_pred/submission/log）
 ```
+
+> エントリポイントは `src/runner/` パッケージに集約し `python -m runner.<name>`（`PYTHONPATH=src`）で実行する。
+> 注意: `gcloud`/`bq`/`kaggle` 等の外部 Python CLI に `PYTHONPATH=src` を渡すと、それらが import する `utils` を本リポの `src/utils` が shadow して壊れる。よって PYTHONPATH はグローバル export せず runner 実行時のみ付与し、外部 CLI を呼ぶ subprocess では PYTHONPATH を除去する（`Makefile` の `PYRUN`、`runner/costs.py`・`runner/submit.py` の `_clean_env`）。
 
 ## データフロー
 
@@ -184,6 +195,10 @@ outputs/runs/{competition}/{run_id}/
 - Vertex 実行時は `gs://<bucket>/runs/{competition}/{run_id}/` に同じ構造で保存し、`collect.py` で `outputs/runs/...` へ落とす。
 - 既存の SQLite 実験ログ（`data/experiments.db`）は引き続き「軽量な横断インデックス」として残し、run_id 成果物が「正本の実体」を持つ。
 
+### データ配送（Vertex）
+
+`data/` はイメージに含めない（`.dockerignore` で除外）。`make stage-data` で `data/<comp>/raw` を `gs://<bucket>/data/<comp>/raw` へ上げ、コンテナ内 `train.py --input-uri` が起動時に取得して `data/<comp>/raw` へ展開する。Kaggle 認証を Vertex に持ち込まないための分離。
+
 ### config 駆動
 
 `conf/config.yaml`（コンペ切替の最小設定）に加え、実験単位の config を `configs/*.yaml` に置き、`train.py --config configs/xxx.yaml` で投入する。
@@ -206,7 +221,7 @@ make submit       RUN_ID=latest                           # 整形して提出
 - ソースは `src/` 配下（`PYTHONPATH=src` で import する）。
 - 非機密の設定は `conf/config.yaml`。秘密情報は置かない（`conf/secret.yaml` は gitignore）。GCP 認証情報も同様に gitignore / secret manager 管理。
 - データ（`data/raw/`, `data/interim/`, `data/features/`, `data/experiments.db`）と `outputs/runs/` は gitignore。
-- DI・Composition Root・strict 型注釈・本番 MLOps 水準の抽象は持ち込まない。Vertex は Custom Job + GCS + Artifact Registry に絞る（ADR 0001）。
+- DI・Composition Root・strict 型注釈の過度な抽象は持ち込まない。非DL/GPU の Vertex/GCP マネージド機能はフル活用する（Custom Job / HP Tuning / Model Registry / Pipelines / Batch Prediction / Endpoint）。tabular メタデータの正本は BigQuery `kaggle_ops`、blob は GCS、学習投入は aiplatform SDK（ADR 0002 が 0001 を supersede）。
 - インタフェース契約のみ `src/ports.py` の Protocol で明文化する。
 
 ## 関連タスク

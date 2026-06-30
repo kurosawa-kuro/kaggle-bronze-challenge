@@ -1,8 +1,9 @@
 # ADR 0001: GCP/Vertex を Kaggle 並列実験ランナーとして最初から前提にする
 
-- Status: Accepted
+- Status: Superseded by ADR 0002（「使わない」節を反転。実験ランナー契約は有効）
 - Date: 2026-06-30
 - Supersedes: `01_requirements.md` 旧記述「本番 MLOps 水準のアーキテクチャ（… Vertex AI 等は使わない）」
+- Superseded-by: `docs/adr/0002-full-vertex-non-dl.md`
 
 ## Context
 

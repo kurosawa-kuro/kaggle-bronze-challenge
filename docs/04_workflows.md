@@ -98,18 +98,49 @@ make smoke CONFIG=configs/lgbm_baseline.yaml RUN_ID=smoke_lgbm
 # ローカル full run
 make train-local CONFIG=configs/lgbm_baseline.yaml RUN_ID=exp001_lgbm
 
-# 学習 image を Artifact Registry へ push
+# 学習 image を Artifact Registry へ push（初回 / コード変更時）
 make gcp-bootstrap
 make build-push
+
+# コンペデータを GCS へ上げる（初回 / データ更新時）。コンテナは train.py --input-uri で取得する
+make stage-data
 
 # Vertex Custom Job へ投入
 make train-vertex CONFIG=configs/lgbm_baseline.yaml RUN_ID=exp001_lgbm
 
 # GCS の成果物を outputs/runs/ に回収
 make collect CONFIG=configs/lgbm_baseline.yaml RUN_ID=exp001_lgbm
+
+# 概算コストを BigQuery に記録 → 当月累計を確認
+make cost-record CONFIG=configs/lgbm_baseline.yaml RUN_ID=exp001_lgbm
+make cost
 ```
 
+コスト可視化は2層: **予算アラート**（Cloud Billing, ¥5000 予算で ¥1000/¥2500/¥4500/¥5000 通知＝実請求のガードレール）と **概算ロガー**（`make cost-record` が完了ジョブの machine×時間×Spot 割を `kaggle_ops.cost_estimates`(BigQuery) に記録、`make cost` で当月累計を ¥1000/¥5000 と比較）。概算は即時、実請求の真値は Billing Export（後追い）。方針: 月¥1000未満は増強自由・¥5000まで承認・超過前に相談。
+
 GCP 設定は `conf/project.yaml` の `gcpProject` / `gcpRegion` / `gcsBucket` / Artifact Registry 項目に置く。ローカル投入は ADC、Vertex コンテナ内はアタッチされた Service Account を使う。
+
+データ配送: `.dockerignore` で `data/` はイメージに含めない。`make stage-data` で `data/<comp>/raw` を `gs://<bucket>/data/<comp>/raw` へ上げ、コンテナ内 `train.py --input-uri` が起動時に取得する（Kaggle 認証を Vertex に持ち込まない）。`train.py` 変更時はイメージ再 push が必要。
+
+## HPO・並列スイープ（GCP レバレッジ）
+
+```bash
+# seed 平均: config の seeds:[42,777,2026] を train.py が横断平均（full run のみ）
+
+# 複数 config を並列 Vertex ジョブに fan-out（非ブロッキング）
+make sweep CONFIGS="configs/lgbm_baseline.yaml configs/lgbm_deep.yaml" TAG=exp01
+
+# Optuna 探索（1マシン）→ best_params.json / best_config.yaml / trials.csv
+make tune CONFIG=configs/lgbm_baseline.yaml RUN_ID=tune01 N_TRIALS=30
+# best で最終学習: make tune ... FINAL=--final（または best_config.yaml を train-local）
+
+# Vertex Hyperparameter Tuning（Vizier 並列探索）
+make hp-tune CONFIG=configs/lgbm_baseline.yaml RUN_ID=hpt01 MAX_TRIALS=20 PARALLEL=4
+```
+
+- **スケール HPO は Vertex 純正の HP Tuning（Vizier）**で行う。Ray クラスタ / MLflow は使わない（実験トラッキングは BigQuery `kaggle_ops` に統一。ADR 0002）。
+- config はイメージにベイクせず base64 でコンテナへ渡す（`train.py --config-b64`）ので、新 config を sweep/hp-tune しても**再ビルド不要**。`train.py` のコード変更時のみ `make build-push`。
+- 注意: 並列 HPT を大きいマシン（n2-standard-16）で回すと `custom_model_training_n2_cpus` quota に当たることがある（quota 増申請 or マシン/並列を絞る）。
 
 ## 最終提出前チェック
 
