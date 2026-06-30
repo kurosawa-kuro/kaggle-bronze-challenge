@@ -99,6 +99,7 @@ make smoke CONFIG=configs/lgbm_baseline.yaml RUN_ID=smoke_lgbm
 make train-local CONFIG=configs/lgbm_baseline.yaml RUN_ID=exp001_lgbm
 
 # 学習 image を Artifact Registry へ push
+make gcp-bootstrap
 make build-push
 
 # Vertex Custom Job へ投入
@@ -115,13 +116,12 @@ GCP 設定は `conf/project.yaml` の `gcpProject` / `gcpRegion` / `gcsBucket` /
 ```bash
 make run           # CV スコアを最終確認
 make logs          # 実験一覧を確認し最良 run_id を特定
-ls submission.csv  # 提出ファイルを確認
 
-# Kaggle CLI で提出
-make submit COMP=<competition-name> MSG="exp001 lgbm baseline cv=0.44498"
+# run_id 成果物から提出（既定の提出経路）
+make submit CONFIG=configs/lgbm_baseline.yaml RUN_ID=exp001_lgbm MSG="exp001 lgbm baseline"
 
-# run_id 成果物から提出
-make submit-run CONFIG=configs/lgbm_baseline.yaml RUN_ID=exp001_lgbm MSG="exp001 lgbm baseline"
+# 旧 root submission.csv から直接提出する場合
+make submit-legacy COMP=<competition-name> MSG="exp001 lgbm baseline cv=0.44498"
 ```
 
 ## 作業終了

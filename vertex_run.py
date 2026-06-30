@@ -32,12 +32,15 @@ def main(argv: list[str] | None = None) -> int:
     train_cfg = _load_yaml(Path(args.config))
     data_cfg = train_cfg.get("data", train_cfg)
 
-    project = args.project or project_cfg.get("gcpProject")
-    region = args.region or project_cfg.get("gcpRegion", "us-central1")
+    gcp_cfg = project_cfg.get("gcp", {})
+    project = args.project or project_cfg.get("gcpProject") or gcp_cfg.get("project")
+    region = args.region or project_cfg.get("gcpRegion") or gcp_cfg.get("region", "us-central1")
     bucket = args.bucket or project_cfg.get("gcsBucket")
     image_uri = args.image_uri or project_cfg.get("imageUri")
     machine_type = args.machine_type or project_cfg.get("vertexMachineType", "n1-standard-4")
     competition = data_cfg["comp"]
+    if not image_uri and project:
+        image_uri = _image_uri(project_cfg, project=project, region=region)
 
     missing = [name for name, value in {
         "project": project,
@@ -104,6 +107,13 @@ def _load_yaml(path: Path) -> dict:
     if not path.exists():
         return {}
     return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+
+
+def _image_uri(project_cfg: dict, *, project: str, region: str) -> str:
+    repo = project_cfg.get("artifactRegistryRepo", "kaggle")
+    image_name = project_cfg.get("imageName", "kaggle-bronze-challenge")
+    image_tag = project_cfg.get("imageTag", "latest")
+    return f"{region}-docker.pkg.dev/{project}/{repo}/{image_name}:{image_tag}"
 
 
 if __name__ == "__main__":

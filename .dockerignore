@@ -1,0 +1,11 @@
+.git
+.venv
+__pycache__
+*.pyc
+data
+outputs
+catboost_info
+notebooks
+docs
+logs
+submission.csv

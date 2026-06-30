@@ -49,14 +49,14 @@
 
 実装順:
 - [x] skeleton 配線（上記）
-- [ ] `train.py` を local full で緑にする（既存 pipelines/models を再利用、挙動を変えない）
-- [ ] run_id 成果物の生成
-- [ ] `make smoke` / `train-local`
-- [ ] 学習コンテナ + Artifact Registry push
-- [ ] `vertex_run.py` + `make train-vertex`（最小 Custom Job で 1 run）
-- [ ] `collect.py` + `make collect`
-- [ ] `submit.py` + `make submit` 経路の整理
-- [ ] 連動ドキュメント更新
+- [x] `train.py` を local full で緑にする（既存 pipelines/models を再利用、挙動を変えない）
+- [x] run_id 成果物の生成
+- [x] `make smoke` / `train-local`
+- [x] 学習コンテナ + Artifact Registry push 経路（Docker build 済み、push は `make gcp-bootstrap && make build-push`）
+- [x] `vertex_run.py` + `make train-vertex`（Custom Job dry-run 済み。実投入は GCP resource 作成後）
+- [x] `collect.py` + `make collect` 経路（GCS bucket 作成後に実行）
+- [x] `submit.py` + `make submit` 経路の整理
+- [x] 連動ドキュメント更新
 
 ## 流用元マッピング（study-gcp-* リポジトリ）
 
@@ -241,3 +241,6 @@ def submit(*, project, region, bucket, image_uri, config_path, run_id, comp,
 
 - 推測でコードを書かない。コマンドは実際に実行して確認する（CLAUDE.md）。
 - GCP コストは「豪華にしない」。Kaggle 実験を 1 コマンドで外に投げられる状態だけを守る。
+- 2026-06-30: `make run` 成功（CV logloss=0.08763）。`make train-local CONFIG=configs/lgbm_baseline.yaml RUN_ID=local_full_check` 成功し、同じ CV logloss=0.08763 と run_id 成果物一式を生成。
+- 2026-06-30: `make smoke CONFIG=configs/lgbm_baseline.yaml RUN_ID=smoke_check` 成功。`docker build -f infra/Dockerfile -t kaggle-bronze-challenge:local .` と `docker run --rm kaggle-bronze-challenge:local train.py --config configs/lgbm_baseline.yaml --run-id container_dryrun --dry-run` 成功。
+- 2026-06-30: GCP active account/project は `kurokawa81toshifumi@gmail.com` / `mlops-dev-a`。`gcsBucket=mlops-dev-a-kaggle-bronze-runs` と AR repo `kaggle` は未作成だったため、コスト発生を避けて実作成・push・Vertex 実投入は保留。明示実行用に `make gcp-bootstrap` を追加。

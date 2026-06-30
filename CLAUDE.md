@@ -19,14 +19,15 @@ make init COMP=<slug>             # 新コンペ初期化（download→正規化
 make run                          # 現在の実験を実行 (run.py)
 make smoke CONFIG=<path>           # train.py --config の短時間確認
 make train-local CONFIG=<path> RUN_ID=<id>   # outputs/runs/<comp>/<run_id>/ に成果物生成
+make gcp-bootstrap                 # 最小 GCP API / Artifact Registry repo / GCS bucket を作成
 make build-push                    # 学習 image を Artifact Registry へ push
 make train-vertex CONFIG=<path> RUN_ID=<id>  # Vertex Custom Job へ投入
 make collect CONFIG=<path> RUN_ID=<id|latest> # GCS から run_id 成果物回収
-make submit-run CONFIG=<path> RUN_ID=<id> MSG=<msg> # run_id 成果物を Kaggle へ提出
+make submit CONFIG=<path> RUN_ID=<id> MSG=<msg> # run_id 成果物を Kaggle へ提出
+make submit-legacy COMP=<slug> MSG=<msg> # root の submission.csv を Kaggle へ提出
 make nb NB=<名前>                 # 特定のノートブックを実行 (notebooks/<名前>.py)
 make logs                         # SQLite の実験ログを表示
 make download COMP=<slug>         # データのみダウンロード（zip展開なし）
-make submit COMP=<slug> MSG=<msg> # Kaggle へ提出
 make clean                        # submission.csv と __pycache__ を削除
 ```
 
