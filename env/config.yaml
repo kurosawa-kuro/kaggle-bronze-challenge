@@ -17,3 +17,8 @@ seed: 42
 data_raw: "data/raw"
 data_interim: "data/interim"
 experiments_db: "data/experiments.db"
+
+# --- GCP ---
+gcp:
+  project: "mlops-dev-a"               # アクティブな GCP プロジェクト
+  account: "kurokawa81toshifumi@gmail.com"

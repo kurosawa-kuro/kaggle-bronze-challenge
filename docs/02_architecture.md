@@ -140,12 +140,73 @@ X_test  = add_ratio_features(X_test)
 
 `make init COMP=<slug>` が download・ファイル正規化・config.yaml 下書き表示・competition doc 生成を1コマンドで行う（`scripts/init_competition.py`）。
 
+## 実行モデル（Vertex-ready 実験契約）
+
+> 決定: `docs/adr/0001-vertex-ready-experiment-runner.md` ／ 実装追跡: `docs/tasks/active/vertex-ready-runner.md`
+> 本節は **目標契約**。下記の `train.py` / `vertex_run.py` / `collect.py` / `submit.py` と `make` ターゲットはタスク完了時に実体化する。
+
+同一の学習コードを **ローカルでも Vertex Custom Job でも実行し、同一の run_id 成果物を出す**。
+Vertex を本番基盤としてではなく、**並列実験ランナー**として使う。
+
+### 実行分担
+
+```
+local   = 思考・1fold smoke・小さい特徴量検証・submission 生成確認
+Vertex  = 5fold full / CatBoost / seed 平均 / 複数 config 並列 / overnight
+Kaggle  = 最終 Notebook 化・submission 提出・LB 確認
+```
+
+### 学習コードと Vertex 固有コードの分離
+
+Vertex 固有コードを学習処理に混ぜない。これを破ると後から詰まる。
+
+| ファイル | 役割 |
+|---|---|
+| `train.py` | 純粋な Kaggle 学習。`--config` 駆動。local / Vertex 共通（Vertex を知らない） |
+| `vertex_run.py` | Custom Job として `train.py` を投入するだけ |
+| `collect.py` | GCS から run_id 成果物を回収する |
+| `submit.py` | submission を整形し Kaggle へ提出する |
+
+### run_id 成果物契約（local / Vertex で同一）
+
+```
+outputs/runs/{competition}/{run_id}/
+  config.yaml            ← 投入に使った config のスナップショット
+  metrics.json           ← cv_score / fold scores / seed 別スコア
+  oof.parquet            ← out-of-fold 予測
+  test_pred.parquet      ← test 予測（seed 平均後）
+  feature_importance.csv
+  submission.csv
+  log.txt
+```
+
+- ローカル実行・Vertex 実行のどちらでも上記レイアウトを生成する。
+- Vertex 実行時は `gs://<bucket>/runs/{competition}/{run_id}/` に同じ構造で保存し、`collect.py` で `outputs/runs/...` へ落とす。
+- 既存の SQLite 実験ログ（`data/experiments.db`）は引き続き「軽量な横断インデックス」として残し、run_id 成果物が「正本の実体」を持つ。
+
+### config 駆動
+
+`conf/config.yaml`（コンペ切替の最小設定）に加え、実験単位の config を `configs/*.yaml` に置き、`train.py --config configs/xxx.yaml` で投入する。
+config には `model` / `cv` / `seeds` / `runtime`（`mode: local|vertex`, `machine_type`, `timeout_hours`）を持たせる。具体スキーマは実装タスクで確定する。
+
+### CLI UX（品質ゲート）
+
+投入までの手間が増えると Vertex は逆効果になる。1 コマンドで完結させる:
+
+```bash
+make smoke        CONFIG=configs/lgbm_baseline.yaml       # 1fold ローカル確認
+make train-local  CONFIG=configs/lgbm_baseline.yaml       # full ローカル
+make train-vertex CONFIG=configs/catboost_seed_avg.yaml   # Vertex へ投入
+make collect      RUN_ID=latest                           # GCS から回収
+make submit       RUN_ID=latest                           # 整形して提出
+```
+
 ## 境界・方針
 
 - ソースは `src/` 配下（`PYTHONPATH=src` で import する）。
-- 非機密の設定は `conf/config.yaml`。秘密情報は置かない（`conf/secret.yaml` は gitignore）。
-- データ（`data/raw/`, `data/interim/`, `data/features/`, `data/experiments.db`）は gitignore。
-- DI・Composition Root・strict 型注釈・本番 MLOps 水準のアーキテクチャは持ち込まない。
+- 非機密の設定は `conf/config.yaml`。秘密情報は置かない（`conf/secret.yaml` は gitignore）。GCP 認証情報も同様に gitignore / secret manager 管理。
+- データ（`data/raw/`, `data/interim/`, `data/features/`, `data/experiments.db`）と `outputs/runs/` は gitignore。
+- DI・Composition Root・strict 型注釈・本番 MLOps 水準の抽象は持ち込まない。Vertex は Custom Job + GCS + Artifact Registry に絞る（ADR 0001）。
 - インタフェース契約のみ `src/ports.py` の Protocol で明文化する。
 
 ## 関連タスク

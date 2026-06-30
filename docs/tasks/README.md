@@ -47,6 +47,7 @@
 
 | ファイル | 用途 |
 |---|---|
+| [active/vertex-ready-runner.md](active/vertex-ready-runner.md) | Vertex-ready 実験ランナーの実装（ADR 0001） |
 | [active/refactoring-candidates.md](active/refactoring-candidates.md) | 残りのクリーンアップ候補 |
 
 ## ルール
