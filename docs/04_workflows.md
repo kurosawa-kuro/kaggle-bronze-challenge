@@ -131,6 +131,33 @@ make hp-tune CONFIG=configs/lgbm_baseline.yaml RUN_ID=hpt01 MAX_TRIALS=20 PARALL
 
 quota に当たる場合は `vertexMachineType` や `PARALLEL` を下げる。
 
+## モデル登録（Vertex Model Registry）
+
+```bash
+make register-model CONFIG=configs/lgbm_baseline.yaml RUN_ID=exp001_lgbm
+```
+
+- `gs://<bucket>/runs/<comp>/<run_id>/model`（train が保存した booster 群）を `kaggle-<comp>` に 1 バージョンとして登録する。
+- 同じ `kaggle-<comp>` が既にあれば新バージョンを積み、`latest` alias を最新へ移す。
+- serving / Endpoint は未配線。registry は版管理・lineage 目的。
+
+## パイプライン（Vertex Pipelines / KFP）
+
+`train` → `register` を 1 つの DAG として投入する。
+
+```bash
+# compile のみ（コスト無し・DAG 検証）
+make pipeline CONFIG=configs/lgbm_baseline.yaml RUN_ID=pipe01 DRY=--dry-run
+
+# 実投入（full 学習ジョブが走る。src を変えたら先に make build-push）
+make build-push
+make pipeline CONFIG=configs/lgbm_baseline.yaml RUN_ID=pipe01
+```
+
+- 既存の学習イメージを container component として使うため、新規の component イメージは不要。
+- config は base64 でパイプラインパラメータとして渡す（イメージ非依存）。
+- ingest/featurize/train/score の細分化はしない（train.py 内で完結。GCS 往復を避ける）。
+
 ## コスト確認
 
 ```bash

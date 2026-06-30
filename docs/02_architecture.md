@@ -24,6 +24,7 @@ src/
     vertex_run.py         # Vertex Custom Job submitter
     collect.py            # GCS run_id 成果物を local に回収
     register.py           # run_id のモデルを Vertex Model Registry に登録
+    pipeline.py           # Vertex Pipelines (KFP): train -> register の DAG
     submit.py             # run_id の submission.csv を Kaggle 提出
     sweep.py              # 複数 config を Custom Job に fan-out
     tune.py               # Optuna tuning
@@ -122,6 +123,7 @@ models.lgbm.train_cv()
 | `src/runner/hp_tune.py` | Vertex Hyperparameter Tuning（Vizier）を投入 |
 | `src/runner/costs.py` | Vertex Custom Job の start/end と machine type から概算コストを BigQuery に記録 |
 | `src/runner/register.py` | `gs://<bucket>/runs/<comp>/<run_id>/model` を Vertex Model Registry に登録。`kaggle-<comp>` に版を積む（`latest` alias）。serving 未配線 |
+| `src/runner/pipeline.py` | Vertex Pipelines (KFP v2)。既存イメージを container component にして `train` → `register` の DAG を compile + 投入。`--dry-run` で compile のみ |
 | `src/utils/logger.py` | CV 結果を BigQuery `<bqDataset>.experiments` に記録。失敗しても学習は止めない |
 | `src/utils/artifact_store.py` | GCS prefix と local directory の 1:1 upload/download |
 | `src/utils/bq.py` | `bq` CLI 経由の最小 BigQuery helper |
@@ -169,10 +171,11 @@ Vertex 実行時は `gs://<bucket>/runs/<competition>/<run_id>/` に同じ内容
 - Vertex Custom Job: full training / sweep jobs
 - Vertex Hyperparameter Tuning: Vizier HPO
 - Vertex Model Registry: run モデルの版管理 / lineage（`make register-model`。serving は未配線）
+- Vertex Pipelines (KFP): `train` → `register` の DAG（`make pipeline`。compile 検証済み、実 run は image 再 push が前提）
 - BigQuery: experiments / cost_estimates
 - Cloud Billing Budget: 実請求ガードレール
 
-Pipelines / Endpoint / Monitoring は ADR 0002 の採用方向には含まれるが、現コードの実装対象ではない（Model Registry は実装済み）。
+Endpoint / Monitoring / Batch Prediction は ADR 0002 の採用方向には含まれるが、現コードの実装対象ではない（Model Registry / Pipelines は実装済み。Batch/Endpoint は実推論コンテナが必要なため未着手）。
 
 ## 境界・注意
 

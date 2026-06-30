@@ -144,9 +144,23 @@ def _image_uri(project_cfg: dict, *, project: str, region: str) -> str:
     return f"{region}-docker.pkg.dev/{project}/{repo}/{image_name}:{image_tag}"
 
 
+def _resolve_config(config: str, config_b64: str | None) -> str:
+    """--config-b64（KFP/コンテナ用: config をイメージにベイクしない）を一時ファイルに展開。"""
+    if config_b64:
+        import base64
+        import tempfile
+
+        tmp = tempfile.NamedTemporaryFile("wb", suffix=".yaml", delete=False)
+        tmp.write(base64.b64decode(config_b64))
+        tmp.close()
+        return tmp.name
+    return config
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Register a run's model into Vertex Model Registry")
     parser.add_argument("--config", default="configs/lgbm_baseline.yaml")
+    parser.add_argument("--config-b64", default=None, help="base64 of the config YAML（コンテナ用）")
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--project-config", default="conf/project.yaml")
     parser.add_argument("--project", default=None)
@@ -161,7 +175,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     register_from_run(
-        config_path=args.config,
+        config_path=_resolve_config(args.config, args.config_b64),
         run_id=args.run_id,
         project_config=args.project_config,
         project=args.project,

@@ -25,7 +25,7 @@ Feature Store を「常駐コスト・運用増だけで実験スループット
 - Vertex AI Custom Job（学習投入。既存）
 - Vertex AI Hyperparameter Tuning / Vizier（既存）
 - **Vertex AI Model Registry**（学習済みモデルの版・alias 管理）← 実装済み（`src/runner/register.py` / `make register-model`。`kaggle-<comp>` に版を積む。serving は未配線）
-- **Vertex AI Pipelines (KFP)**（ingest → featurize → train → score の DAG 化）
+- **Vertex AI Pipelines (KFP)** ← 実装済み（`src/runner/pipeline.py` / `make pipeline`。既存イメージで `train` → `register` の粗い DAG。compile 検証済み、実 run は image 再 push 前提。ingest/featurize/train/score の細分化は GCS 往復が増えるため不採用）
 - **Vertex AI Batch Prediction**（バッチ推論）
 - Endpoint / Model Monitoring（配信・監視。⚠️常駐コスト系。下記コスト方針で監視し、邪魔なら最初に削る）
 
