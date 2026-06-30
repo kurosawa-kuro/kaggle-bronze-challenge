@@ -37,7 +37,7 @@ make train-local CONFIG=configs/lgbm_baseline.yaml RUN_ID=exp001_lgbm
 make logs
 ```
 
-`runner.train` は現状 `model.name: lgbm` のみ対応。CatBoost / XGBoost は `models/` に実装があるが、config runner から切り替える経路はまだない。
+`runner.experiment.train` は現状 `model.name: lgbm` のみ対応。CatBoost / XGBoost は `models/` に実装があるが、config runner から切り替える経路はまだない。
 
 ## 特徴量を追加する
 
@@ -100,7 +100,7 @@ make sweep CONFIGS="configs/lgbm_baseline.yaml configs/lgbm_deep.yaml" TAG=exp01
 dry-run:
 
 ```bash
-PYTHONPATH=src .venv/bin/python -m runner.sweep \
+PYTHONPATH=src .venv/bin/python -m runner.experiment.sweep \
   --configs configs/lgbm_baseline.yaml configs/lgbm_deep.yaml \
   --tag exp01 --image-uri <image> --dry-run
 ```
@@ -222,7 +222,7 @@ make submit-legacy COMP=<competition-slug> MSG="legacy submission"
 
 ```bash
 make -n train-vertex CONFIG=configs/lgbm_baseline.yaml RUN_ID=check
-PYTHONPATH=src .venv/bin/python -m runner.vertex_run --config configs/lgbm_baseline.yaml --run-id check --dry-run
+PYTHONPATH=src .venv/bin/python -m runner.experiment.vertex_run --config configs/lgbm_baseline.yaml --run-id check --dry-run
 find outputs/runs/<comp>/<run_id> -maxdepth 1 -type f -printf '%f\n' | sort
 ```
 

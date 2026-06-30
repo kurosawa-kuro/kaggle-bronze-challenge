@@ -1,6 +1,6 @@
 """Submit a Vertex AI Hyperparameter Tuning job (Vizier) for the train.py contract.
 
-同一コンテナ(`-m runner.train`)を trial worker にし、Vizier が探索パラメータを
+同一コンテナ(`-m runner.experiment.train`)を trial worker にし、Vizier が探索パラメータを
 `--<name>=<value>` で渡す（train.py が parse_known_args で拾い model.params 上書き）。
 train.py は `--hp-metric-tag cv_score` で評価値を hypertune 報告する。並列 trial は
 parallel_trial_count で制御。Optuna(1マシン) に対し、これは Vizier によるマネージド並列探索。
@@ -12,7 +12,7 @@ import base64
 import json
 from pathlib import Path
 
-from runner.vertex_run import _image_uri, _label_value, _load_yaml
+from runner.experiment.vertex_run import _image_uri, _label_value, _load_yaml
 
 METRIC_TAG = "cv_score"
 
@@ -62,7 +62,7 @@ def main(argv: list[str] | None = None) -> int:
         "replica_count": 1,
         "container_spec": {
             "image_uri": image_uri,
-            "command": ["python", "-m", "runner.train"],
+            "command": ["python", "-m", "runner.experiment.train"],
             "args": container_args,
         },
     }]

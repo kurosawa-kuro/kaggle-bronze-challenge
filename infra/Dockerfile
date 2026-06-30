@@ -19,4 +19,4 @@ COPY src ./src
 ENV PYTHONPATH=/app/src
 
 ENTRYPOINT ["python"]
-CMD ["-m", "runner.train", "--config", "configs/lgbm_baseline.yaml"]
+CMD ["-m", "runner.experiment.train", "--config", "configs/lgbm_baseline.yaml"]

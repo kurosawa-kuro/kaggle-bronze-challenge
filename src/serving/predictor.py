@@ -1,6 +1,6 @@
 """Vertex AI 推論コンテナ（LightGBM seed-bag）。Batch Prediction / Endpoint 用。
 
-`runner.train` が保存した `model/`（`booster_NNN.txt` + `manifest.json`）を読み、
+`runner.experiment.train` が保存した `model/`（`booster_NNN.txt` + `manifest.json`）を読み、
 全 booster の平均を返す（`pipelines.score.predict` と同じ推論）。
 
 Vertex のカスタムコンテナ契約に従う:

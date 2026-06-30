@@ -1,6 +1,6 @@
 """Submit a Vertex AI Batch Prediction job from a registered model.
 
-ADR 0002 item 4。`runner.register --serving-image ...` で **実推論コンテナ付き**に登録した
+ADR 0002 item 4。`runner.model.register --serving-image ...` で **実推論コンテナ付き**に登録した
 モデル（`kaggle-<comp>`）に対し、GCS 上の instances(jsonl) をバッチ推論する。
 
 推論コンテナは `infra/Dockerfile.serving`（`src/serving/predictor.py`、LightGBM seed-bag

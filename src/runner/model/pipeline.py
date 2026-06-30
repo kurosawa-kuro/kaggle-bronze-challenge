@@ -1,7 +1,7 @@
 """Compile + submit a Vertex AI Pipeline (KFP v2): train -> register.
 
 ADR 0002 item 3。既存の学習イメージをそのままコンテナコンポーネントとして使い、
-`runner.train` → `runner.register` を 1 つの DAG（Vertex Pipelines）にする。
+`runner.experiment.train` → `runner.model.register` を 1 つの DAG（Vertex Pipelines）にする。
 
 altitude（粗さの方針）:
 - ingest / featurize / train / score は `train.py` 内で完結しているため、本パイプラインは
@@ -70,7 +70,7 @@ def build_and_run(
     def train_op(config_b64: str, run_id: str, output_uri: str, input_uri: str):
         return dsl.ContainerSpec(
             image=image,
-            command=["python", "-m", "runner.train"],
+            command=["python", "-m", "runner.experiment.train"],
             args=["--config-b64", config_b64, "--run-id", run_id,
                   "--output-uri", output_uri, "--input-uri", input_uri],
         )
@@ -79,7 +79,7 @@ def build_and_run(
     def register_op(config_b64: str, run_id: str):
         return dsl.ContainerSpec(
             image=image,
-            command=["python", "-m", "runner.register"],
+            command=["python", "-m", "runner.model.register"],
             args=["--config-b64", config_b64, "--run-id", run_id],
         )
 

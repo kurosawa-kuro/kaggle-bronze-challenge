@@ -319,7 +319,7 @@ def _write_predictions(path: Path, preds: np.ndarray) -> None:
 
 
 def _write_models(model_dir: Path, models: list[Any], *, meta: dict[str, Any]) -> None:
-    """学習済み booster を保存（Vertex Model Registry 登録 = runner.register の成果物）。
+    """学習済み booster を保存（Vertex Model Registry 登録 = runner.model.register の成果物）。
 
     seed×fold の全 booster を保存し、推論は全 booster の平均（pipelines.score.predict と同じ）。
     `manifest.json` が boosters の一覧と推論方法・メタを持つ。

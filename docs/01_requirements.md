@@ -43,8 +43,8 @@ ADR 0002 で、非 DL/GPU の Vertex/GCP マネージド機能を活用する方
 | 区分 | 内容 |
 |---|---|
 | 目標水準 | ブロンズ取得。過剰なシルバー・ゴールド狙いの複雑化は避ける |
-| モデル選択 | `runner.train` は現状 LightGBM のみ。CatBoost / XGBoost は既存 `models/` にあるが、config runner への統合は未完 |
-| 実験入口 | `PYTHONPATH=src python -m runner.train --config ...` |
+| モデル選択 | `runner.experiment.train` は現状 LightGBM のみ。CatBoost / XGBoost は既存 `models/` にあるが、config runner への統合は未完 |
+| 実験入口 | `PYTHONPATH=src python -m runner.experiment.train --config ...` |
 | 旧実験入口 | `make run` は `runner.run` を実行する手動編集型の旧経路 |
 | 実験管理 | run_id 成果物を GCS / `outputs/runs/` に保存し、tabular メタデータは BigQuery に記録 |
 | コスト管理 | `make cost-record` / `make cost` / `make cost-notify` で概算コストを BigQuery と Discord に連携 |

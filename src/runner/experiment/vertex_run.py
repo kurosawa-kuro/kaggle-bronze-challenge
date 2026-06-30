@@ -89,7 +89,7 @@ def submit_from_config(
         "replica_count": 1,
         "container_spec": {
             "image_uri": image_uri,
-            "command": ["python", "-m", "runner.train"],
+            "command": ["python", "-m", "runner.experiment.train"],
             "args": container_args,
         },
     }]

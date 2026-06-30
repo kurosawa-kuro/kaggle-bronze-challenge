@@ -5,7 +5,7 @@
 | ファイル | 内容 |
 |---|---|
 | `conf/config.yaml` | 旧 `make run` と default config 用の flat schema |
-| `configs/*.yaml` | `runner.train` 用の実験 config |
+| `configs/*.yaml` | `runner.experiment.train` 用の実験 config |
 | `conf/project.yaml` | repo path、GCP project / region / bucket / image、BQ dataset、コスト設定 |
 | `conf/secret.yaml` | gitignore。Kaggle token / Discord webhook 等 |
 
@@ -60,7 +60,7 @@ runtime:
 
 補足:
 
-- `runner.train` は full run では `seeds` を横断し、OOF / test prediction / feature importance を平均する。
+- `runner.experiment.train` は full run では `seeds` を横断し、OOF / test prediction / feature importance を平均する。
 - smoke では `cv.seed` 単発。
 - `experiments_db` が残っている config は旧互換の名残で、現行 logger は BigQuery を使う。
 - `model.name` は現状 `lgbm` のみ runner 対応。

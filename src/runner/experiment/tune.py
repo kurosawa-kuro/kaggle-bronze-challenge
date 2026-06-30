@@ -96,7 +96,7 @@ def run(*, config_path: Path, run_id: str, n_trials: int, smoke: bool, final: bo
     print(f"[tune] best {metric}={study.best_value:.5f}  -> {run_dir}/best_params.json")
 
     if final:
-        from runner.train import run as train_run
+        from runner.experiment.train import run as train_run
         train_run(config_path=best_config_path, run_id=f"{run_id}_final", smoke=smoke)
         print(f"[tune] final seed-averaged run: {run_id}_final")
     else:

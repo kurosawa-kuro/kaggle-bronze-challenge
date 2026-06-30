@@ -34,11 +34,11 @@ run:
 
 # Vertex-ready runner: quick one-fold local check
 smoke:
-	$(PYRUN) runner.train --config $(CONFIG) --run-id $(RUN_ID) --smoke
+	$(PYRUN) runner.experiment.train --config $(CONFIG) --run-id $(RUN_ID) --smoke
 
 # Vertex-ready runner: full local training
 train-local:
-	$(PYRUN) runner.train --config $(CONFIG) --run-id $(RUN_ID)
+	$(PYRUN) runner.experiment.train --config $(CONFIG) --run-id $(RUN_ID)
 
 # Build and push the training image to Artifact Registry
 build-push:
@@ -57,38 +57,38 @@ stage-data:
 
 # Submit the same train.py contract to Vertex Custom Job (Spot by default)
 train-vertex:
-	$(PYRUN) runner.vertex_run --config $(CONFIG) --run-id $(RUN_ID) --image-uri $(IMAGE) $(SPOT)
+	$(PYRUN) runner.experiment.vertex_run --config $(CONFIG) --run-id $(RUN_ID) --image-uri $(IMAGE) $(SPOT)
 
 # Optuna 探索（1マシン）。best params を run_id 成果物に保存。N_TRIALS / FINAL=--final
 # make tune CONFIG=configs/lgbm_baseline.yaml RUN_ID=tune01 N_TRIALS=30
 tune:
-	$(PYRUN) runner.tune --config $(CONFIG) --run-id $(RUN_ID) --n-trials $(or $(N_TRIALS),30) $(FINAL)
+	$(PYRUN) runner.experiment.tune --config $(CONFIG) --run-id $(RUN_ID) --n-trials $(or $(N_TRIALS),30) $(FINAL)
 
 # Vertex Hyperparameter Tuning (Vizier) — マネージド並列探索。MAX_TRIALS / PARALLEL
 # make hp-tune CONFIG=configs/lgbm_baseline.yaml RUN_ID=hpt01 MAX_TRIALS=20 PARALLEL=4
 hp-tune:
-	$(PYRUN) runner.hp_tune --config $(CONFIG) --run-id $(RUN_ID) --image-uri $(IMAGE) --max-trials $(or $(MAX_TRIALS),20) --parallel-trials $(or $(PARALLEL),4)
+	$(PYRUN) runner.experiment.hp_tune --config $(CONFIG) --run-id $(RUN_ID) --image-uri $(IMAGE) --max-trials $(or $(MAX_TRIALS),20) --parallel-trials $(or $(PARALLEL),4)
 
 # Fan out multiple configs as parallel Vertex Custom Jobs (Spot by default)
 # make sweep CONFIGS="configs/a.yaml configs/b.yaml" TAG=exp01
 sweep:
-	$(PYRUN) runner.sweep --configs $(CONFIGS) $(if $(TAG),--tag $(TAG),) --image-uri $(IMAGE) $(SPOT)
+	$(PYRUN) runner.experiment.sweep --configs $(CONFIGS) $(if $(TAG),--tag $(TAG),) --image-uri $(IMAGE) $(SPOT)
 
 # Collect artifacts from gs://<bucket>/runs/<competition>/<run_id>
 collect:
-	$(PYRUN) runner.collect --config $(CONFIG) --run-id $(RUN_ID)
+	$(PYRUN) runner.ops.collect --config $(CONFIG) --run-id $(RUN_ID)
 
 # Register a run's model into Vertex AI Model Registry (gs://<bucket>/runs/<comp>/<run_id>/model)
 register-model:
-	$(PYRUN) runner.register --config $(CONFIG) --run-id $(RUN_ID)
+	$(PYRUN) runner.model.register --config $(CONFIG) --run-id $(RUN_ID)
 
 # Register WITH the real serving container so the model is batch/online predictable
 register-servable:
-	$(PYRUN) runner.register --config $(CONFIG) --run-id $(RUN_ID) --serving-image $(SERVING_IMAGE)
+	$(PYRUN) runner.model.register --config $(CONFIG) --run-id $(RUN_ID) --serving-image $(SERVING_IMAGE)
 
 # Submit a Vertex AI Pipeline (KFP): train -> register. DRY=--dry-run for compile-only.
 pipeline:
-	$(PYRUN) runner.pipeline --config $(CONFIG) --run-id $(RUN_ID) $(DRY)
+	$(PYRUN) runner.model.pipeline --config $(CONFIG) --run-id $(RUN_ID) $(DRY)
 
 # Build + push the serving image (infra/Dockerfile.serving) to Artifact Registry
 build-push-serving:
@@ -97,27 +97,27 @@ build-push-serving:
 
 # Submit a Vertex Batch Prediction job. SRC=gs://.../instances.jsonl. DRY=--dry-run.
 batch-predict:
-	$(PYRUN) runner.batch_predict --config $(CONFIG) --run-id $(RUN_ID) --gcs-source $(SRC) $(DRY)
+	$(PYRUN) runner.model.batch_predict --config $(CONFIG) --run-id $(RUN_ID) --gcs-source $(SRC) $(DRY)
 
 # Deploy a servable model to a Vertex Endpoint. WARNING: 24/7 standing cost. DRY=--dry-run.
 endpoint-deploy:
-	$(PYRUN) runner.deploy deploy --config $(CONFIG) $(DRY)
+	$(PYRUN) runner.model.deploy deploy --config $(CONFIG) $(DRY)
 
 # Undeploy + delete the Endpoint to stop the standing cost.
 endpoint-teardown:
-	$(PYRUN) runner.deploy teardown --config $(CONFIG) $(DRY)
+	$(PYRUN) runner.model.deploy teardown --config $(CONFIG) $(DRY)
 
 # Record a finished Vertex job's estimated cost into BigQuery (kaggle_ops.cost_estimates)
 cost-record:
-	$(PYRUN) runner.costs record --config $(CONFIG) --run-id $(RUN_ID)
+	$(PYRUN) runner.ops.costs record --config $(CONFIG) --run-id $(RUN_ID)
 
 # Show month-to-date estimated GCP cost vs ¥1000/¥5000 thresholds
 cost:
-	$(PYRUN) runner.costs report --config $(CONFIG)
+	$(PYRUN) runner.ops.costs report --config $(CONFIG)
 
 # Push the month-to-date cost summary to Discord (webhook in conf/secret.yaml)
 cost-notify:
-	$(PYRUN) runner.costs notify --config $(CONFIG)
+	$(PYRUN) runner.ops.costs notify --config $(CONFIG)
 
 # 特定のノートブック実験を実行: make nb NB=exp002_catboost_base
 nb:
@@ -140,7 +140,7 @@ download:
 
 # Kaggle 提出: make submit CONFIG=configs/lgbm_baseline.yaml RUN_ID=exp001 MSG="exp001 lgbm baseline"
 submit:
-	doppler run -- sh -c 'KAGGLE_API_TOKEN="$$ML_KAGGLE_TOKEN" PYTHONPATH=src $(PYTHON) -m runner.submit --config $(CONFIG) --run-id $(RUN_ID) --message "$(MSG)"'
+	doppler run -- sh -c 'KAGGLE_API_TOKEN="$$ML_KAGGLE_TOKEN" PYTHONPATH=src $(PYTHON) -m runner.ops.submit --config $(CONFIG) --run-id $(RUN_ID) --message "$(MSG)"'
 
 # 旧提出経路: repository root の submission.csv を直接提出
 submit-legacy:

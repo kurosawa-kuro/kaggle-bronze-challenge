@@ -9,7 +9,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from runner.vertex_run import submit_from_config
+from runner.experiment.vertex_run import submit_from_config
 
 
 def main(argv: list[str] | None = None) -> int:
