@@ -33,6 +33,8 @@ make pipeline CONFIG=<path> RUN_ID=<id> [DRY=--dry-run] # Vertex Pipelines (KFP)
 make build-push-serving            # 推論コンテナ（infra/Dockerfile.serving）を Artifact Registry へ push
 make register-servable CONFIG=<path> RUN_ID=<id> # 実 serving image 付きでモデル登録（Batch/Endpoint 可能に）
 make batch-predict CONFIG=<path> RUN_ID=<id> SRC=gs://.../instances.jsonl [DRY=--dry-run] # Vertex Batch Prediction 投入
+make endpoint-deploy CONFIG=<path> [DRY=--dry-run]   # ⚠️常駐コスト: servable モデルを Vertex Endpoint へデプロイ
+make endpoint-teardown CONFIG=<path> [DRY=--dry-run] # Endpoint を undeploy+削除して常駐コストを止める
 make cost-record CONFIG=<path> RUN_ID=<id>  # 完了ジョブの概算コストを BigQuery に記録
 make cost                          # 当月の概算コスト累計を表示（¥1000/¥5000 しきい値）
 make cost-notify                   # 当月概算サマリを Discord へ送信（webhook は conf/secret.yaml）

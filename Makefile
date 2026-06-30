@@ -1,4 +1,4 @@
-.PHONY: setup run nb logs clean init download submit smoke train-local train-vertex collect register-model register-servable pipeline build-push build-push-serving batch-predict gcp-bootstrap submit-legacy stage-data cost cost-record cost-notify sweep tune hp-tune
+.PHONY: setup run nb logs clean init download submit smoke train-local train-vertex collect register-model register-servable pipeline build-push build-push-serving batch-predict endpoint-deploy endpoint-teardown gcp-bootstrap submit-legacy stage-data cost cost-record cost-notify sweep tune hp-tune
 
 VENV   := .venv
 PYTHON := $(VENV)/bin/python
@@ -98,6 +98,14 @@ build-push-serving:
 # Submit a Vertex Batch Prediction job. SRC=gs://.../instances.jsonl. DRY=--dry-run.
 batch-predict:
 	$(PYRUN) runner.batch_predict --config $(CONFIG) --run-id $(RUN_ID) --gcs-source $(SRC) $(DRY)
+
+# Deploy a servable model to a Vertex Endpoint. WARNING: 24/7 standing cost. DRY=--dry-run.
+endpoint-deploy:
+	$(PYRUN) runner.deploy deploy --config $(CONFIG) $(DRY)
+
+# Undeploy + delete the Endpoint to stop the standing cost.
+endpoint-teardown:
+	$(PYRUN) runner.deploy teardown --config $(CONFIG) $(DRY)
 
 # Record a finished Vertex job's estimated cost into BigQuery (kaggle_ops.cost_estimates)
 cost-record:

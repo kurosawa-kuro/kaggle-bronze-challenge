@@ -27,6 +27,7 @@ src/
     register.py           # run_id のモデルを Vertex Model Registry に登録
     pipeline.py           # Vertex Pipelines (KFP): train -> register の DAG
     batch_predict.py      # Vertex Batch Prediction 投入
+    deploy.py             # Vertex Endpoint deploy/teardown（⚠️常駐コスト）
     submit.py             # run_id の submission.csv を Kaggle 提出
     sweep.py              # 複数 config を Custom Job に fan-out
     tune.py               # Optuna tuning
@@ -129,6 +130,7 @@ models.lgbm.train_cv()
 | `src/runner/register.py` | `gs://<bucket>/runs/<comp>/<run_id>/model` を Vertex Model Registry に登録。`kaggle-<comp>` に版を積む（`latest` alias）。serving 未配線 |
 | `src/runner/pipeline.py` | Vertex Pipelines (KFP v2)。既存イメージを container component にして `train` → `register` の DAG を compile + 投入。`--dry-run` で compile のみ |
 | `src/runner/batch_predict.py` | 登録モデル（`--serving-image` 付き）に対し Vertex Batch Prediction を投入。`--dry-run` で plan のみ |
+| `src/runner/deploy.py` | servable モデルを Vertex Endpoint に deploy / teardown。⚠️常駐コストのため自動デプロイしない設計、終了後 teardown 必須 |
 | `src/serving/predictor.py` | 推論コンテナ本体。`model/`(booster+manifest) を読み全 booster 平均を返す。stdlib HTTP で `/health` `/predict` を提供（新 infra lib なし） |
 | `src/utils/logger.py` | CV 結果を BigQuery `<bqDataset>.experiments` に記録。失敗しても学習は止めない |
 | `src/utils/artifact_store.py` | GCS prefix と local directory の 1:1 upload/download |
@@ -179,10 +181,11 @@ Vertex 実行時は `gs://<bucket>/runs/<competition>/<run_id>/` に同じ内容
 - Vertex Model Registry: run モデルの版管理 / lineage（`make register-model`。serving は未配線）
 - Vertex Pipelines (KFP): `train` → `register` の DAG（`make pipeline`。compile 検証済み、実 run は image 再 push が前提）
 - Vertex Batch Prediction: 推論コンテナ（`infra/Dockerfile.serving`）で登録したモデルにバッチ推論（`make batch-predict`。推論器はローカル Docker 実証済み、実 job は serving image push が前提）
+- Vertex Endpoint: servable モデルのオンライン推論（`make endpoint-deploy` / `endpoint-teardown`）。⚠️常駐コストのため**コードのみ実装・自動デプロイしない**設計
 - BigQuery: experiments / cost_estimates
 - Cloud Billing Budget: 実請求ガードレール
 
-Endpoint（オンライン推論）/ Monitoring は ADR 0002 の採用方向には含まれるが、現コードの実装対象ではない（Custom Job / HP Tuning / Model Registry / Pipelines / Batch Prediction は実装済み。Endpoint は常駐コストのため未着手＝「邪魔なら削る」側。推論コンテナ自体は Batch と共用できる）。
+Custom Job / HP Tuning / Model Registry / Pipelines / Batch Prediction / Endpoint(deploy コード) まで実装済み。Endpoint の実デプロイと Monitoring は常駐コスト・稼働 Endpoint 前提のため意図的に未実行（ADR 0002 の「邪魔なら最初に削る」側。Kaggle ブロンズでは基本不要）。推論コンテナは Batch / Endpoint 共用。
 
 ## 境界・注意
 

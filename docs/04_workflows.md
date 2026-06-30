@@ -177,7 +177,20 @@ make batch-predict CONFIG=configs/lgbm_baseline.yaml RUN_ID=bp01 \
 
 - 推論器（`/health` `/predict`）はローカル Docker で実証済み。`make register-servable` 無しの
   プレースホルダ登録モデルは Batch には使えない。
-- Endpoint（オンライン）は未配線。推論コンテナは Batch と共用できる（ADR 0002 で「邪魔なら削る」側）。
+- Endpoint（オンライン）は Batch と推論コンテナを共用する（下記）。
+
+## オンライン推論（Vertex Endpoint）⚠️常駐コスト
+
+```bash
+make endpoint-deploy CONFIG=configs/lgbm_baseline.yaml DRY=--dry-run  # まず plan 確認
+make endpoint-deploy CONFIG=configs/lgbm_baseline.yaml               # 実デプロイ（24/7 課金開始）
+# ... 推論を使ったら必ず ...
+make endpoint-teardown CONFIG=configs/lgbm_baseline.yaml             # undeploy + Endpoint 削除
+```
+
+- **Endpoint にデプロイされたモデルは 24/7 課金される**（`feedback_gcp_cost_policy`）。Kaggle ブロンズでは基本不要。使うときだけ deploy し、終わったら即 teardown。
+- `make register-servable`（実 serving image）済みのモデルが前提。
+- Monitoring は稼働 Endpoint 前提のため未実装。
 
 ## コスト確認
 

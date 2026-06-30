@@ -27,7 +27,7 @@ Feature Store を「常駐コスト・運用増だけで実験スループット
 - **Vertex AI Model Registry**（学習済みモデルの版・alias 管理）← 実装済み（`src/runner/register.py` / `make register-model`。`kaggle-<comp>` に版を積む。serving は未配線）
 - **Vertex AI Pipelines (KFP)** ← 実装済み（`src/runner/pipeline.py` / `make pipeline`。既存イメージで `train` → `register` の粗い DAG。compile 検証済み、実 run は image 再 push 前提。ingest/featurize/train/score の細分化は GCS 往復が増えるため不採用）
 - **Vertex AI Batch Prediction**（バッチ推論）← 実装済み（`infra/Dockerfile.serving` + `src/serving/predictor.py` の推論コンテナ、`src/runner/batch_predict.py` / `make batch-predict`。推論器はローカル Docker 実証済み、実 job は serving image push 前提。`make register-servable` で実 serving 付き登録）
-- Endpoint / Model Monitoring（配信・監視。⚠️常駐コスト系。下記コスト方針で監視し、邪魔なら最初に削る）
+- Endpoint / Model Monitoring（配信・監視。⚠️常駐コスト系。下記コスト方針で監視し、邪魔なら最初に削る）← Endpoint は **deploy/teardown コードのみ実装**（`src/runner/deploy.py` / `make endpoint-deploy`・`endpoint-teardown`、dry-run 検証済み）。常駐コストのため**実デプロイはしない**。Monitoring は稼働 Endpoint 前提のため未実装
 
 ### 2. データ/メタデータの正本は BigQuery に統一（infra lib 最小化）
 
